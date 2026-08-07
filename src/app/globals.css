@@ -5,6 +5,27 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* Indeterminate top progress bar, mirroring chess-tracker-frontend's
+   GlobalLoader. Tailwind v4 has no JS config, so the animation is registered
+   as a theme token here rather than in a tailwind.config file. */
+@theme {
+  --color-brand-500: #0c93e7;
+  --color-brand-600: #0074c5;
+  --animate-global-loader: global-loader 1.2s ease-in-out infinite;
+}
+
+@keyframes global-loader {
+  0% {
+    transform: translateX(-100%);
+  }
+  60% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
 /* Only set what Tailwind utilities can't: the base font. Deliberately no
    background/color here — an unlayered `body` rule would beat every Tailwind
    utility (unlayered styles win over layered ones), which silently overrode

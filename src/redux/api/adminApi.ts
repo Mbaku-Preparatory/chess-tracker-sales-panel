@@ -54,9 +54,20 @@ export interface AdminUser {
   firstName: string;
   lastName: string;
   isActive: boolean;
+  isDisabled: boolean;
   dateJoined: string;
   lastLogin: string | null;
   playersCount: number;
+}
+
+/** Fields the panel may edit. All optional — only what's sent gets written. */
+export interface UpdateUserPatch {
+  id: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  username?: string;
+  isActive?: boolean;
 }
 
 export const adminApi = createApi({
@@ -75,6 +86,7 @@ export const adminApi = createApi({
               firstName
               lastName
               isActive
+              isDisabled
               dateJoined
               lastLogin
               playersCount
@@ -85,7 +97,92 @@ export const adminApi = createApi({
       transformResponse: (response: { users: AdminUser[] }) => response.users,
       providesTags: ["User"],
     }),
+
+    updateUser: builder.mutation<AdminUser, UpdateUserPatch>({
+      query: ({ id, ...patch }) => ({
+        query: `
+          mutation UpdateUser(
+            $id: ID!
+            $firstName: String
+            $lastName: String
+            $email: String
+            $username: String
+            $isActive: Boolean
+          ) {
+            updateUser(
+              id: $id
+              firstName: $firstName
+              lastName: $lastName
+              email: $email
+              username: $username
+              isActive: $isActive
+            ) {
+              user { id username email firstName lastName isActive isDisabled }
+            }
+          }
+        `,
+        // Only the keys actually present are forwarded, so an untouched field
+        // stays untouched server-side rather than being overwritten with a
+        // stale value read at the time the form opened.
+        variables: { id, ...patch },
+      }),
+      transformResponse: (r: { updateUser: { user: AdminUser } }) => r.updateUser.user,
+      invalidatesTags: ["User"],
+    }),
+
+    setUserDisabled: builder.mutation<AdminUser, { id: string; disabled: boolean }>({
+      query: ({ id, disabled }) => ({
+        query: `
+          mutation SetUserDisabled($id: ID!, $disabled: Boolean!) {
+            setUserDisabled(id: $id, disabled: $disabled) {
+              user { id isDisabled }
+            }
+          }
+        `,
+        variables: { id, disabled },
+      }),
+      transformResponse: (r: { setUserDisabled: { user: AdminUser } }) => r.setUserDisabled.user,
+      invalidatesTags: ["User"],
+    }),
+
+    deleteUser: builder.mutation<{ deletedId: string }, { id: string; expectedUsername: string }>({
+      query: ({ id, expectedUsername }) => ({
+        query: `
+          mutation DeleteUser($id: ID!, $expectedUsername: String!) {
+            deleteUser(id: $id, expectedUsername: $expectedUsername) {
+              deletedId
+              deletedUsername
+            }
+          }
+        `,
+        variables: { id, expectedUsername },
+      }),
+      transformResponse: (r: { deleteUser: { deletedId: string } }) => r.deleteUser,
+      invalidatesTags: ["User"],
+    }),
   }),
 });
 
-export const { useGetUsersQuery } = adminApi;
+export const {
+  useGetUsersQuery,
+  useUpdateUserMutation,
+  useSetUserDisabledMutation,
+  useDeleteUserMutation,
+} = adminApi;
+
+/**
+ * True while any query or mutation is in flight.
+ *
+ * RTK Query already records every request's status in the store, so the global
+ * loader can read that directly instead of the app maintaining its own request
+ * counter (which is what chess-tracker-frontend's requestTracker has to do,
+ * since it isn't on RTK Query).
+ */
+export const selectIsFetching = (state: {
+  [adminApi.reducerPath]: ReturnType<typeof adminApi.reducer>;
+}): boolean => {
+  const slice = state[adminApi.reducerPath];
+  const pending = (bag: Record<string, { status?: string } | undefined>) =>
+    Object.values(bag).some((entry) => entry?.status === "pending");
+  return pending(slice.queries) || pending(slice.mutations);
+};

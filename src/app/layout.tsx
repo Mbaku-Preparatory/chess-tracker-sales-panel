@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Image from "next/image";
 import "./globals.css";
 
+import { GlobalLoader } from "@/components/GlobalLoader";
 import { ReduxProvider } from "@/redux/Providers";
 
 const geistSans = Geist({
@@ -39,6 +40,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               page itself. UserButton renders nothing while signed out, which
               leaves the header as plain branding on that page. */}
           <ReduxProvider>
+            <GlobalLoader />
             <header className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3">
               <div className="flex items-center gap-2.5">
                 <Image
