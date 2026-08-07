@@ -1,26 +1,16 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* Only set what Tailwind utilities can't: the base font. Deliberately no
+   background/color here — an unlayered `body` rule would beat every Tailwind
+   utility (unlayered styles win over layered ones), which silently overrode
+   the `bg-gray-50 text-gray-900` on <body> in layout.tsx. This is an internal
+   admin tool with a hardcoded light palette, so there's no dark-mode block
+   either; add one only by theming the components too. */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ClerkProvider, UserButton } from "@clerk/nextjs";
 import { Geist, Geist_Mono } from "next/font/google";
+import Image from "next/image";
 import "./globals.css";
 
 import { ReduxProvider } from "@/redux/Providers";
@@ -23,18 +24,32 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <ClerkProvider>
+      {/* suppressHydrationWarning: browser extensions inject attributes onto
+          <html> before React hydrates (e.g. data-scribe-recorder-ready), which
+          the server HTML can't match. This suppresses attribute mismatches on
+          this element only — it does not hide mismatches anywhere below. */}
       <html
         lang="en"
         className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+        suppressHydrationWarning
       >
         <body className="min-h-full flex flex-col bg-gray-50 text-gray-900">
           {/* proxy.ts already enforces auth.protect() on every route, so by
               the time we render here the user is guaranteed signed in. */}
           <ReduxProvider>
             <header className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3">
-              <span className="text-sm font-semibold tracking-tight">
-                Mbaku Preparatory — Sales Panel
-              </span>
+              <div className="flex items-center gap-2.5">
+                <Image
+                  src="/logo.svg"
+                  alt=""
+                  width={28}
+                  height={28}
+                  priority
+                />
+                <span className="text-sm font-semibold tracking-tight text-gray-900">
+                  Mbaku Preparatory — Sales Panel
+                </span>
+              </div>
               <UserButton />
             </header>
             <main className="flex-1 p-6">{children}</main>
