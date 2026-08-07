@@ -34,8 +34,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         suppressHydrationWarning
       >
         <body className="min-h-full flex flex-col bg-gray-50 text-gray-900">
-          {/* proxy.ts already enforces auth.protect() on every route, so by
-              the time we render here the user is guaranteed signed in. */}
+          {/* proxy.ts enforces auth.protect() on every route except /sign-in,
+              so anything below is either an authenticated admin or the sign-in
+              page itself. UserButton renders nothing while signed out, which
+              leaves the header as plain branding on that page. */}
           <ReduxProvider>
             <header className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3">
               <div className="flex items-center gap-2.5">
