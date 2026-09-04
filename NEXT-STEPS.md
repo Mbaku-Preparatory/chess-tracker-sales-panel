@@ -1,7 +1,7 @@
 # Next steps — sales panel
 
 ## What's built
-Internal admin tool for managing Mbaku Preparatory users (see `../PRODUCT-VISION.md`,
+Internal admin tool for managing Chess Preparatory users (see `../PRODUCT-VISION.md`,
 §5 "Sales/admin panel"). Stack: Next.js App Router (v16), Clerk for auth, Redux
 Toolkit + RTK Query for data fetching, Tailwind.
 

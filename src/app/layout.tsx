@@ -18,8 +18,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Mbaku Preparatory — Sales Panel",
-  description: "Internal admin panel for managing Mbaku Preparatory users.",
+  title: "Chess Preparatory — Sales Panel",
+  description: "Internal admin panel for managing Chess Preparatory users.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -51,7 +51,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                   priority
                 />
                 <span className="text-sm font-semibold tracking-tight text-gray-900">
-                  Mbaku Preparatory — Sales Panel
+                  Chess Preparatory — Sales Panel
                 </span>
               </div>
               <UserButton />
