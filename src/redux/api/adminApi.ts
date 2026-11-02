@@ -58,6 +58,7 @@ export interface AdminUser {
   dateJoined: string;
   lastLogin: string | null;
   playersCount: number;
+  booksCount: number;
 }
 
 /** Fields the panel may edit. All optional — only what's sent gets written. */
@@ -90,6 +91,7 @@ export const adminApi = createApi({
               dateJoined
               lastLogin
               playersCount
+              booksCount
             }
           }
         `,
