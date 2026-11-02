@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { Badge } from "@/components/Badge";
 import { DeleteUserDialog } from "@/components/DeleteUserDialog";
 import { EditUserDialog } from "@/components/EditUserDialog";
 import { BanIcon, PencilIcon, RefreshIcon, TrashIcon, UndoIcon } from "@/components/icons";
@@ -19,25 +20,17 @@ function formatDate(value: string | null): string {
   });
 }
 
-const iconBtn =
-  "rounded-md border border-gray-300 bg-white p-1.5 text-gray-600 transition-colors " +
-  "hover:bg-gray-50 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50";
+const th = "px-4 py-3 font-medium";
 
 function StatusBadges({ user }: { user: AdminUser }) {
   return (
     <div className="flex flex-wrap gap-1">
-      <span
-        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-          user.isActive ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
-        }`}
-      >
-        {user.isActive ? "Verified" : "Unverified"}
-      </span>
-      {user.isDisabled && (
-        <span className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
-          Suspended
-        </span>
+      {user.isActive ? (
+        <Badge label="Verified" variant="success" />
+      ) : (
+        <Badge label="Unverified" variant="warning" />
       )}
+      {user.isDisabled && <Badge label="Suspended" variant="danger" />}
     </div>
   );
 }
@@ -50,11 +43,13 @@ export default function UsersPage() {
   const [deleting, setDeleting] = useState<AdminUser | null>(null);
 
   return (
-    <div className="mx-auto max-w-6xl">
-      <div className="mb-6 flex items-center justify-between">
+    <div>
+      <div className="mb-8 flex items-end justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900">Users</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
+            Users
+          </h1>
+          <p className="mt-1.5 text-base text-gray-500 dark:text-gray-400">
             {users ? `${users.length} account${users.length === 1 ? "" : "s"}` : "Loading…"}
           </p>
         </div>
@@ -63,63 +58,70 @@ export default function UsersPage() {
           onClick={() => refetch()}
           aria-label="Refresh users"
           title="Refresh"
-          className={iconBtn}
+          className="btn-icon"
         >
           <RefreshIcon />
         </button>
       </div>
 
       {isLoading && (
-        <div className="rounded-lg border border-gray-200 bg-white p-6 text-sm text-gray-500">
-          Loading users…
-        </div>
+        <div className="card p-6 text-sm text-gray-500 dark:text-gray-400">Loading users…</div>
       )}
 
       {isError && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          Couldn&apos;t load users: {JSON.stringify(error)}
-        </div>
+        <div className="banner-danger">Couldn&apos;t load users: {JSON.stringify(error)}</div>
       )}
 
       {users && (
-        <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
-          <table className="min-w-full divide-y divide-gray-200 text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-2.5 text-left font-medium text-gray-500">Name</th>
-                <th className="px-4 py-2.5 text-left font-medium text-gray-500">Username</th>
-                <th className="px-4 py-2.5 text-left font-medium text-gray-500">Email</th>
-                <th className="px-4 py-2.5 text-left font-medium text-gray-500">Status</th>
-                <th className="px-4 py-2.5 text-left font-medium text-gray-500">Players</th>
-                <th className="px-4 py-2.5 text-left font-medium text-gray-500">Joined</th>
-                <th className="px-4 py-2.5 text-left font-medium text-gray-500">Last login</th>
-                <th className="px-4 py-2.5 text-right font-medium text-gray-500">Actions</th>
+        <div className="card overflow-x-auto">
+          <table className="min-w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-gray-200 text-xs tracking-[0.06em] text-gray-500 uppercase dark:border-dark-border dark:text-gray-400">
+                <th scope="col" className={th}>Name</th>
+                <th scope="col" className={th}>Username</th>
+                <th scope="col" className={th}>Email</th>
+                <th scope="col" className={th}>Status</th>
+                <th scope="col" className={th}>Players</th>
+                <th scope="col" className={th}>Joined</th>
+                <th scope="col" className={th}>Last login</th>
+                <th scope="col" className={`${th} text-right`}>Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 dark:divide-dark-border">
               {users.map((user) => (
-                <tr key={user.id} className={user.isDisabled ? "bg-gray-50/60" : undefined}>
-                  <td className="px-4 py-2.5 text-gray-900">
+                <tr
+                  key={user.id}
+                  className={`transition-colors hover:bg-gray-50 dark:hover:bg-dark-elevated ${
+                    user.isDisabled ? "bg-gray-50/60 dark:bg-dark-elevated/40" : ""
+                  }`}
+                >
+                  <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
                     {user.firstName || user.lastName
                       ? `${user.firstName} ${user.lastName}`.trim()
                       : "—"}
                   </td>
-                  <td className="px-4 py-2.5 text-gray-700">{user.username}</td>
-                  <td className="px-4 py-2.5 text-gray-700">{user.email}</td>
-                  <td className="px-4 py-2.5">
+                  <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{user.username}</td>
+                  <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{user.email}</td>
+                  <td className="px-4 py-3">
                     <StatusBadges user={user} />
                   </td>
-                  <td className="px-4 py-2.5 text-gray-700">{user.playersCount}</td>
-                  <td className="px-4 py-2.5 text-gray-500">{formatDate(user.dateJoined)}</td>
-                  <td className="px-4 py-2.5 text-gray-500">{formatDate(user.lastLogin)}</td>
-                  <td className="px-4 py-2.5">
+                  <td className="px-4 py-3 text-gray-700 tabular-nums dark:text-gray-300">
+                    {user.playersCount}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-gray-500 dark:text-gray-400">
+                    {formatDate(user.dateJoined)}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-gray-500 dark:text-gray-400">
+                    {formatDate(user.lastLogin)}
+                  </td>
+                  <td className="px-4 py-3">
                     <div className="flex justify-end gap-1.5">
                       <button
                         type="button"
                         onClick={() => setEditing(user)}
                         aria-label={`Edit ${user.username}`}
                         title="Edit"
-                        className={iconBtn}
+                        className="btn-icon"
                       >
                         <PencilIcon />
                       </button>
@@ -135,7 +137,7 @@ export default function UsersPage() {
                             : `Deactivate ${user.username}`
                         }
                         title={user.isDisabled ? "Reactivate" : "Deactivate"}
-                        className={iconBtn}
+                        className="btn-icon"
                       >
                         {user.isDisabled ? <UndoIcon /> : <BanIcon />}
                       </button>
@@ -144,7 +146,7 @@ export default function UsersPage() {
                         onClick={() => setDeleting(user)}
                         aria-label={`Delete ${user.username}`}
                         title="Delete permanently"
-                        className={`${iconBtn} hover:border-red-300 hover:bg-red-50 hover:text-red-700`}
+                        className="btn-icon hover:border-red-300 hover:bg-red-50 hover:text-red-700 dark:hover:border-red-900/60 dark:hover:bg-red-950/30 dark:hover:text-red-400"
                       >
                         <TrashIcon />
                       </button>
@@ -154,7 +156,7 @@ export default function UsersPage() {
               ))}
               {users.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
+                  <td colSpan={8} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">
                     No users yet.
                   </td>
                 </tr>

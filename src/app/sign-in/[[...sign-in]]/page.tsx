@@ -4,7 +4,7 @@ import { SignIn } from "@clerk/nextjs";
 // — factor-two, SSO callbacks, password reset — as sub-paths of this page.
 export default function SignInPage() {
   return (
-    <div className="flex flex-1 items-center justify-center py-10">
+    <div className="flex min-h-[70vh] items-center justify-center">
       <SignIn />
     </div>
   );

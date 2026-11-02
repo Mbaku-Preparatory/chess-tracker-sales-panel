@@ -1,17 +1,62 @@
 @import "tailwindcss";
 
+/* The same switch as chess-tracker-frontend: a `dark` class on <html>, set
+   before first paint by THEME_SCRIPT (lib/theme.ts). */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme inline {
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter), Inter, system-ui, sans-serif;
 }
 
-/* Indeterminate top progress bar, mirroring chess-tracker-frontend's
-   GlobalLoader. Tailwind v4 has no JS config, so the animation is registered
-   as a theme token here rather than in a tailwind.config file. */
+/* The design tokens from chess-tracker-frontend (globals.css and
+   tailwind.config.ts), which is the source of truth: --color-brand-500 is the
+   logo's green exactly, and --color-brand-600 is the filled-button step that
+   carries white text at AA. Tailwind v4 has no JS config, so they are
+   registered here. Keep the values in step with that repo. */
 @theme {
-  --color-brand-500: #0c93e7;
-  --color-brand-600: #0074c5;
+  --color-brand-50: rgb(243 248 234);
+  --color-brand-100: rgb(228 241 207);
+  --color-brand-200: rgb(203 227 166);
+  --color-brand-300: rgb(174 209 119);
+  --color-brand-400: rgb(147 190 82);
+  --color-brand-500: rgb(124 172 66);
+  --color-brand-600: rgb(92 122 51);
+  --color-brand-700: rgb(74 99 41);
+  --color-brand-800: rgb(59 79 33);
+  --color-brand-900: rgb(47 64 27);
+  --color-brand-950: rgb(27 37 16);
+
+  --color-dark-bg: #0b0b0f;
+  --color-dark-surface: #14141c;
+  --color-dark-elevated: #1d1d28;
+  --color-dark-border: #2c2c3e;
+  --color-dark-muted: #35354a;
+
   --animate-global-loader: global-loader 1.2s ease-in-out infinite;
+}
+
+/* Colours for Clerk's sign-in and account menu, which sit outside Tailwind.
+   They are CSS variables so both follow the `dark` class on their own, with no
+   theme state to pass to ClerkProvider. See lib/clerkAppearance.ts. */
+:root {
+  --clerk-background: #ffffff;
+  --clerk-foreground: #111827;
+  --clerk-muted: #f3f4f6;
+  --clerk-muted-foreground: #6b7280;
+  --clerk-input: #ffffff;
+  --clerk-input-foreground: #111827;
+  --clerk-border: #9ca3af; /* stronger than the app's: Clerk draws it at low alpha */
+  --clerk-neutral: #111827;
+}
+.dark {
+  --clerk-background: #14141c;
+  --clerk-foreground: #f3f4f6;
+  --clerk-muted: #1d1d28;
+  --clerk-muted-foreground: #9ca3af;
+  --clerk-input: #1d1d28;
+  --clerk-input-foreground: #f3f4f6;
+  --clerk-border: #6b7280;
+  --clerk-neutral: #f3f4f6;
 }
 
 @keyframes global-loader {
@@ -26,12 +71,54 @@
   }
 }
 
-/* Only set what Tailwind utilities can't: the base font. Deliberately no
-   background/color here — an unlayered `body` rule would beat every Tailwind
-   utility (unlayered styles win over layered ones), which silently overrode
-   the `bg-gray-50 text-gray-900` on <body> in layout.tsx. This is an internal
-   admin tool with a hardcoded light palette, so there's no dark-mode block
-   either; add one only by theming the components too. */
-body {
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+/* In a layer, never bare: an unlayered rule would beat every Tailwind utility. */
+@layer base {
+  body {
+    @apply bg-gray-50 font-sans text-gray-900 antialiased dark:bg-dark-bg dark:text-gray-100;
+  }
+
+  .dark {
+    color-scheme: dark;
+  }
+
+  /* Tailwind 4 stopped giving buttons a pointer; the main app is on 3. */
+  button:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+/* The main app's component classes, with the same names, plus what only this
+   panel needs. `shadow-xs` here is what Tailwind 3 called `shadow-sm`. */
+@layer components {
+  .card {
+    @apply rounded-xl border border-gray-200 bg-white shadow-xs dark:border-dark-border dark:bg-dark-surface;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-700 focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:focus:ring-offset-dark-bg;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 focus:outline-none dark:border-dark-border dark:bg-dark-elevated dark:text-gray-200 dark:hover:bg-dark-muted dark:focus:ring-offset-dark-bg;
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:focus:ring-offset-dark-bg;
+  }
+
+  .btn-icon {
+    @apply inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-900 focus:ring-2 focus:ring-brand-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-dark-border dark:bg-dark-elevated dark:text-gray-400 dark:hover:bg-dark-muted dark:hover:text-gray-100;
+  }
+
+  .field {
+    @apply block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none dark:border-dark-border dark:bg-dark-elevated dark:text-gray-100 dark:placeholder:text-gray-500;
+  }
+
+  .field-label {
+    @apply mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300;
+  }
+
+  .banner-danger {
+    @apply rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400;
+  }
 }

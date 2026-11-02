@@ -1,19 +1,16 @@
 import type { Metadata } from "next";
-import { ClerkProvider, UserButton } from "@clerk/nextjs";
-import { Geist, Geist_Mono } from "next/font/google";
-import Image from "next/image";
+import { ClerkProvider } from "@clerk/nextjs";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
 import { GlobalLoader } from "@/components/GlobalLoader";
+import { Navbar } from "@/components/Navbar";
+import { clerkAppearance, clerkLocalization } from "@/lib/clerkAppearance";
+import { THEME_SCRIPT } from "@/lib/theme";
 import { ReduxProvider } from "@/redux/Providers";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
@@ -24,39 +21,23 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <ClerkProvider>
-      {/* suppressHydrationWarning: browser extensions inject attributes onto
-          <html> before React hydrates (e.g. data-scribe-recorder-ready), which
-          the server HTML can't match. This suppresses attribute mismatches on
-          this element only — it does not hide mismatches anywhere below. */}
-      <html
-        lang="en"
-        className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-        suppressHydrationWarning
-      >
-        <body className="min-h-full flex flex-col bg-gray-50 text-gray-900">
-          {/* proxy.ts enforces auth.protect() on every route except /sign-in,
-              so anything below is either an authenticated admin or the sign-in
-              page itself. UserButton renders nothing while signed out, which
-              leaves the header as plain branding on that page. */}
+    <ClerkProvider appearance={clerkAppearance} localization={clerkLocalization}>
+      {/* suppressHydrationWarning: THEME_SCRIPT adds the `dark` class to <html>
+          before React hydrates, and browser extensions inject attributes there
+          too (e.g. data-scribe-recorder-ready); the server HTML can't match
+          either. This suppresses attribute mismatches on this element only — it
+          does not hide mismatches anywhere below. */}
+      <html lang="en" className={`${inter.variable} h-full`} suppressHydrationWarning>
+        <head>
+          <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+        </head>
+        <body className="flex min-h-full flex-col">
           <ReduxProvider>
             <GlobalLoader />
-            <header className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3">
-              <div className="flex items-center gap-2.5">
-                <Image
-                  src="/logo.svg"
-                  alt=""
-                  width={28}
-                  height={28}
-                  priority
-                />
-                <span className="text-sm font-semibold tracking-tight text-gray-900">
-                  Chess Preparatory — Sales Panel
-                </span>
-              </div>
-              <UserButton />
-            </header>
-            <main className="flex-1 p-6">{children}</main>
+            <Navbar />
+            <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
+              {children}
+            </main>
           </ReduxProvider>
         </body>
       </html>
