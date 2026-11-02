@@ -67,6 +67,14 @@ export function UndoIcon({ className = "h-4 w-4" }: IconProps) {
   );
 }
 
+export function ChevronRightIcon({ className = "h-4 w-4" }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="m9 6 6 6-6 6" />
+    </svg>
+  );
+}
+
 export function SunIcon({ className = "h-4 w-4" }: IconProps) {
   return (
     <svg {...base} className={className}>
