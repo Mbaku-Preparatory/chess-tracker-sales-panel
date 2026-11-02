@@ -40,7 +40,7 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-black/40 p-4 pt-16"
+      className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-black/50 p-4 pt-16"
       onMouseDown={(e) => {
         // mousedown, not click: a click that *starts* inside the panel and ends
         // on the backdrop (drag-selecting text) shouldn't close the dialog.
@@ -53,12 +53,12 @@ export function Modal({
         aria-modal="true"
         aria-label={title}
         tabIndex={-1}
-        className="w-full max-w-md rounded-lg border border-gray-200 bg-white shadow-xl outline-none"
+        className="card w-full max-w-md shadow-lg outline-none"
       >
-        <div className="border-b border-gray-200 px-5 py-3">
-          <h2 className="text-sm font-semibold text-gray-900">{title}</h2>
+        <div className="border-b border-gray-200 px-6 py-4 dark:border-dark-border">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
         </div>
-        <div className="px-5 py-4">{children}</div>
+        <div className="p-6">{children}</div>
       </div>
     </div>
   );

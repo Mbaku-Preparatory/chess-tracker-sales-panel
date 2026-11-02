@@ -39,8 +39,8 @@ export function DeleteUserDialog({ user, onClose }: { user: AdminUser; onClose: 
 
   return (
     <Modal title={`Delete ${user.username}`} onClose={onClose}>
-      <div className="space-y-3">
-        <p className="text-sm text-gray-700">
+      <div className="space-y-4">
+        <p className="text-sm text-gray-700 dark:text-gray-300">
           This permanently deletes <strong>{user.username}</strong> ({user.email}) and everything
           they own — including{" "}
           <strong>
@@ -48,42 +48,40 @@ export function DeleteUserDialog({ user, onClose }: { user: AdminUser; onClose: 
           </strong>
           , their prep sessions, repertoire and tournaments.
         </p>
-        <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+        <p className="banner-danger">
           This cannot be undone. To suspend access instead while keeping their data, cancel and use
           Deactivate.
         </p>
 
         <label className="block">
-          <span className="mb-1 block text-xs font-medium text-gray-700">
-            Type <code className="rounded bg-gray-100 px-1 py-0.5">{user.username}</code> to confirm
+          <span className="field-label">
+            Type{" "}
+            <code className="rounded bg-gray-100 px-1 py-0.5 font-semibold dark:bg-dark-muted">
+              {user.username}
+            </code>{" "}
+            to confirm
           </span>
           <input
             autoFocus
             value={typed}
             onChange={(e) => setTyped(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+            className="field focus:border-red-500 focus:ring-red-500"
           />
         </label>
 
         {message && (
-          <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-            {message}
-          </p>
+          <p className="banner-danger">{message}</p>
         )}
 
-        <div className="flex justify-end gap-2 pt-1">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
+        <div className="flex justify-end gap-3 pt-1">
+          <button type="button" onClick={onClose} className="btn-secondary">
             Cancel
           </button>
           <button
             type="button"
             onClick={onConfirm}
             disabled={!matches || isLoading}
-            className="inline-flex items-center gap-1.5 rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="btn-danger"
           >
             {isLoading && <SpinnerIcon className="h-3.5 w-3.5" />}
             Delete permanently

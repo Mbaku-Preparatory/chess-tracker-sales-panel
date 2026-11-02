@@ -10,10 +10,6 @@ import {
   type UpdateUserPatch,
 } from "@/redux/api/adminApi";
 
-const field =
-  "w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-900 " +
-  "focus:border-brand-600 focus:outline-none focus:ring-1 focus:ring-brand-600";
-
 export function EditUserDialog({ user, onClose }: { user: AdminUser; onClose: () => void }) {
   const [firstName, setFirstName] = useState(user.firstName);
   const [lastName, setLastName] = useState(user.lastName);
@@ -56,22 +52,22 @@ export function EditUserDialog({ user, onClose }: { user: AdminUser; onClose: ()
 
   return (
     <Modal title={`Edit ${user.username}`} onClose={onClose}>
-      <form onSubmit={onSubmit} className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
+      <form onSubmit={onSubmit} className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
           <label className="block">
-            <span className="mb-1 block text-xs font-medium text-gray-700">First name</span>
-            <input className={field} value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+            <span className="field-label">First name</span>
+            <input className="field" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
           </label>
           <label className="block">
-            <span className="mb-1 block text-xs font-medium text-gray-700">Last name</span>
-            <input className={field} value={lastName} onChange={(e) => setLastName(e.target.value)} />
+            <span className="field-label">Last name</span>
+            <input className="field" value={lastName} onChange={(e) => setLastName(e.target.value)} />
           </label>
         </div>
 
         <label className="block">
-          <span className="mb-1 block text-xs font-medium text-gray-700">Email</span>
+          <span className="field-label">Email</span>
           <input
-            className={field}
+            className="field"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -79,20 +75,20 @@ export function EditUserDialog({ user, onClose }: { user: AdminUser; onClose: ()
         </label>
 
         <label className="block">
-          <span className="mb-1 block text-xs font-medium text-gray-700">Username</span>
-          <input className={field} value={username} onChange={(e) => setUsername(e.target.value)} />
+          <span className="field-label">Username</span>
+          <input className="field" value={username} onChange={(e) => setUsername(e.target.value)} />
         </label>
 
         <label className="flex items-start gap-2 pt-1">
           <input
             type="checkbox"
-            className="mt-0.5"
+            className="mt-0.5 accent-brand-600"
             checked={isActive}
             onChange={(e) => setIsActive(e.target.checked)}
           />
-          <span className="text-xs text-gray-700">
+          <span className="text-sm text-gray-700 dark:text-gray-300">
             <span className="font-medium">Email verified</span>
-            <span className="mt-0.5 block text-gray-500">
+            <span className="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">
               Unverified accounts can&apos;t log in. Tick this to let someone in whose
               verification email never arrived.
             </span>
@@ -100,23 +96,17 @@ export function EditUserDialog({ user, onClose }: { user: AdminUser; onClose: ()
         </label>
 
         {message && (
-          <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-            {message}
-          </p>
+          <p className="banner-danger">{message}</p>
         )}
 
-        <div className="flex justify-end gap-2 pt-1">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
+        <div className="flex justify-end gap-3 pt-1">
+          <button type="button" onClick={onClose} className="btn-secondary">
             Cancel
           </button>
           <button
             type="submit"
             disabled={!dirty || isLoading}
-            className="inline-flex items-center gap-1.5 rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-600/90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="btn-primary"
           >
             {isLoading && <SpinnerIcon className="h-3.5 w-3.5" />}
             Save changes
