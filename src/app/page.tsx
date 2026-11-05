@@ -1,6 +1,8 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Fragment, Suspense, useMemo, useState } from "react";
 
 import { Badge } from "@/components/Badge";
 import { DeleteUserDialog } from "@/components/DeleteUserDialog";
@@ -13,19 +15,12 @@ import {
   TrashIcon,
   UndoIcon,
 } from "@/components/icons";
+import { daysUntil, formatDate, FUNNEL, HEALTH, STATUS } from "@/lib/format";
 import {
   useGetUsersQuery,
   useSetUserDisabledMutation,
   type AdminUser,
 } from "@/redux/api/adminApi";
-
-function formatDate(value: string | null): string {
-  if (!value) return "—";
-  return new Date(value).toLocaleString(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
-}
 
 const th = "px-4 py-3 font-medium";
 
@@ -58,8 +53,78 @@ function Detail({ label, children }: { label: string; children: React.ReactNode 
   );
 }
 
+function SubscriptionCell({ user }: { user: AdminUser }) {
+  const sub = user.subscription;
+  const status = STATUS[sub.status];
+  const left = daysUntil(sub.paidUntil);
+  return (
+    <div className="flex flex-col items-start gap-1">
+      <Badge label={status.label} variant={status.variant} title={status.hint} />
+      {sub.paidUntil && (
+        <span className="text-xs whitespace-nowrap text-gray-500 dark:text-gray-400">
+          {left !== null && left >= 0 ? `until ${formatDate(sub.paidUntil, false)}` : `ended ${formatDate(sub.paidUntil, false)}`}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function HealthCell({ user }: { user: AdminUser }) {
+  const h = user.subscription.health;
+  if (!h) return <span className="text-gray-400 dark:text-gray-600">—</span>;
+  const look = HEALTH[h.label];
+  return (
+    <span className="flex items-center gap-2" title={`Payment ${h.payment}/4 · Tenure ${h.tenure}/2 · Engagement ${h.engagement}/4`}>
+      <span className="font-semibold tabular-nums text-gray-900 dark:text-gray-100">{h.score}</span>
+      <Badge label={look.label} variant={look.variant} />
+    </span>
+  );
+}
+
+const STATUS_FILTERS: { value: string; label: string }[] = [
+  { value: "", label: "Everyone" },
+  { value: "paying", label: "Paying now" },
+  { value: "active", label: STATUS.active.label },
+  { value: "expiring", label: STATUS.expiring.label },
+  { value: "lapsed", label: STATUS.lapsed.label },
+  { value: "churned", label: STATUS.churned.label },
+  { value: "never", label: "Never subscribed" },
+];
+
+function matchesStatus(user: AdminUser, filter: string): boolean {
+  if (!filter) return true;
+  const s = user.subscription.status;
+  return filter === "paying" ? s === "active" || s === "expiring" : s === filter;
+}
+
 export default function UsersPage() {
-  const { data: users, isLoading, isError, error, refetch } = useGetUsersQuery();
+  // useSearchParams needs a Suspense boundary for the static build.
+  return (
+    <Suspense fallback={<div className="card p-6 text-sm text-gray-500 dark:text-gray-400">Loading users…</div>}>
+      <UsersList />
+    </Suspense>
+  );
+}
+
+function UsersList() {
+  const { data: allUsers, isLoading, isError, error, refetch } = useGetUsersQuery();
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
+  const statusFilter = params.get("status") ?? "";
+  const [search, setSearch] = useState("");
+
+  const users = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return allUsers?.filter(
+      (u) =>
+        matchesStatus(u, statusFilter) &&
+        (!q || [u.username, u.email, u.firstName, u.lastName].some((v) => v.toLowerCase().includes(q))),
+    );
+  }, [allUsers, statusFilter, search]);
+
+  const setStatusFilter = (value: string) =>
+    router.replace(value ? `${pathname}?status=${value}` : pathname, { scroll: false });
   const [setUserDisabled, { isLoading: isToggling }] = useSetUserDisabledMutation();
 
   const [editing, setEditing] = useState<AdminUser | null>(null);
@@ -81,7 +146,11 @@ export default function UsersPage() {
             Users
           </h1>
           <p className="mt-1.5 text-base text-gray-500 dark:text-gray-400">
-            {users ? `${users.length} account${users.length === 1 ? "" : "s"}` : "Loading…"}
+            {users && allUsers
+              ? users.length === allUsers.length
+                ? `${users.length} account${users.length === 1 ? "" : "s"}`
+                : `${users.length} of ${allUsers.length} accounts`
+              : "Loading…"}
           </p>
         </div>
         <button
@@ -93,6 +162,22 @@ export default function UsersPage() {
         >
           <RefreshIcon />
         </button>
+      </div>
+
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <input
+          type="search"
+          className="field max-w-xs"
+          placeholder="Search name, username or email"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          aria-label="Search users"
+        />
+        <select className="field w-auto" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} aria-label="Filter by subscription">
+          {STATUS_FILTERS.map((f) => (
+            <option key={f.value} value={f.value}>{f.label}</option>
+          ))}
+        </select>
       </div>
 
       {isLoading && (
@@ -112,7 +197,9 @@ export default function UsersPage() {
                   <span className="sr-only">Details</span>
                 </th>
                 <th scope="col" className={th}>Username</th>
-                <th scope="col" className={th}>Status</th>
+                <th scope="col" className={th}>Account</th>
+                <th scope="col" className={th}>Subscription</th>
+                <th scope="col" className={th}>Health</th>
                 <th scope="col" className={th}>Players</th>
                 <th scope="col" className={th}>Books</th>
                 <th scope="col" className={th}>Joined</th>
@@ -130,7 +217,7 @@ export default function UsersPage() {
                       // Anywhere on the row opens it, except a button, which does
                       // what it says.
                       onClick={(e) => {
-                        if (!(e.target as HTMLElement).closest("button")) toggleDetails(user.id);
+                        if (!(e.target as HTMLElement).closest("button, a")) toggleDetails(user.id);
                       }}
                       className={`cursor-pointer ${
                         user.isDisabled
@@ -154,10 +241,21 @@ export default function UsersPage() {
                         </button>
                       </td>
                       <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
-                        {user.username}
+                        <Link
+                          href={`/users/${user.id}`}
+                          className="hover:text-brand-700 hover:underline dark:hover:text-brand-400"
+                        >
+                          {user.username}
+                        </Link>
                       </td>
                       <td className="px-4 py-3">
                         <StatusBadges user={user} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <SubscriptionCell user={user} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <HealthCell user={user} />
                       </td>
                       <td className="px-4 py-3 text-gray-700 tabular-nums dark:text-gray-300">
                         {user.playersCount}
@@ -209,11 +307,11 @@ export default function UsersPage() {
                     </tr>
                     {open && (
                       <tr id={detailsId} className="bg-gray-50 dark:bg-dark-elevated/50">
-                        <td colSpan={7} className="px-4 py-3">
+                        <td colSpan={9} className="px-4 py-3">
                           {/* Sticky and capped on a phone, where the row is wider
                               than the card: the details stay in view, not out past
                               the scroll. */}
-                          <dl className="sticky left-4 grid max-w-[calc(100vw-4.25rem)] gap-x-8 gap-y-3 pl-10 sm:max-w-none sm:grid-cols-[1fr_1.5fr_1fr]">
+                          <dl className="sticky left-4 grid max-w-[calc(100vw-4.25rem)] gap-x-8 gap-y-3 pl-10 sm:max-w-none sm:grid-cols-[1fr_1.5fr_1fr_1fr]">
                             <Detail label="Name">
                               {user.firstName || user.lastName
                                 ? `${user.firstName} ${user.lastName}`.trim()
@@ -221,6 +319,7 @@ export default function UsersPage() {
                             </Detail>
                             <Detail label="Email">{user.email}</Detail>
                             <Detail label="Last login">{formatDate(user.lastLogin)}</Detail>
+                            <Detail label="Funnel">{FUNNEL[user.subscription.funnelStage]}</Detail>
                           </dl>
                         </td>
                       </tr>
@@ -230,8 +329,8 @@ export default function UsersPage() {
               })}
               {users.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">
-                    No users yet.
+                  <td colSpan={9} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">
+                    {allUsers?.length ? "No one matches." : "No users yet."}
                   </td>
                 </tr>
               )}

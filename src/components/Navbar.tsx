@@ -2,12 +2,20 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 import { forgetGoogleChoice } from "@/components/GoogleSignIn";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { clearSession, useSession } from "@/lib/session";
 import { adminApi } from "@/redux/api/adminApi";
 import { useAppDispatch } from "@/redux/hooks";
+
+const NAV = [
+  { href: "/overview", label: "Overview" },
+  { href: "/", label: "Users" },
+  { href: "/plans", label: "Plans" },
+  { href: "/audit", label: "Audit" },
+];
 
 /**
  * The main app's bar, with a label to say which app this is.
@@ -20,6 +28,7 @@ export function Navbar() {
   // bar as plain branding plus the theme switch.
   const session = useSession();
   const dispatch = useAppDispatch();
+  const pathname = usePathname();
 
   function signOut() {
     forgetGoogleChoice();
@@ -40,6 +49,28 @@ export function Navbar() {
             Sales Panel
           </span>
         </Link>
+
+        {session && (
+          <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto px-2">
+            {NAV.map((item) => {
+              const current = item.href === "/" ? pathname === "/" || pathname.startsWith("/users") : pathname.startsWith(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={current ? "page" : undefined}
+                  className={`rounded-full px-3 py-1.5 text-sm font-medium whitespace-nowrap ${
+                    current
+                      ? "bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400"
+                      : "text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-dark-elevated dark:hover:text-gray-100"
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+        )}
 
         <div className="flex items-center gap-1">
           <ThemeToggle className="text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-dark-elevated dark:hover:text-gray-100" />

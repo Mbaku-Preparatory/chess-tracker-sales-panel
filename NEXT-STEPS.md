@@ -60,9 +60,29 @@ Locally: `cp .env.example .env.local`, then `npm install && npm run dev`.
   (Apollo's own cache + Redux) — see the commit message on the initial scaffold
   commit for the fuller reasoning.
 
+## Subscriptions (added 2026-11-05)
+- **Overview** (`/overview`): paying now, expiring this week, new this month,
+  lapsed, revenue this month and all time, every account by status.
+- **Users** (`/`): subscription status and health per row, search, and a status
+  filter (`?status=paying|active|expiring|lapsed|churned|never`).
+- **A user** (`/users/[id]`): the subscription, the health score with its three
+  parts, the ledger of payments and grants, and the panel history. Actions:
+  record a payment made outside Paystack (needs the M-Pesa code), give free time,
+  void a grant (needs a reason), edit terms (agreed price, founding member,
+  price group).
+- **Plans** (`/plans`): edit prices and what is on sale. A price change applies
+  to the next sale only.
+- **Audit** (`/audit`): every change made in the panel, with who and when.
+
+The rules live in the backend (`subscriptions/services.py`); the panel only
+fills in defaults. Access is prepaid time, not invoices: see the backend's
+`subscriptions/models.py`.
+
 ## Not yet built (deliberately deferred)
-- Subscription/plan status, manual overrides (extend trial, refund) — next, once
-  the backend has a subscription model.
+- Payments arriving through Paystack: the panel shows them once the app's
+  checkout creates grants (backend `subscriptions/services.grant_access`).
+- Assigning a salesperson to an account (Bomahut has it; one admin doesn't need it).
+- A Mbaku usage page (questions and cost per user).
 - Support/ticket visibility — no backend model for this yet.
 - Any role/permission tiers — explicitly out of scope until there's more than one
   admin (see vision doc's Best Practices section on the admin panel).
