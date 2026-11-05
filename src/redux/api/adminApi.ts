@@ -1,5 +1,7 @@
 import { createApi, fetchBaseQuery, type BaseQueryFn } from "@reduxjs/toolkit/query/react";
-import { getToken } from "@clerk/nextjs";
+
+import { ADMIN_GRAPHQL_URL } from "@/lib/config";
+import { clearSession, readSession } from "@/lib/session";
 
 interface GraphQLRequest {
   query: string;
@@ -16,10 +18,9 @@ interface GraphQLResponseBody<T> {
 }
 
 const rawBaseQuery = fetchBaseQuery({
-  baseUrl:
-    process.env.NEXT_PUBLIC_ADMIN_GRAPHQL_URL ?? "http://localhost:8000/admin-graphql/",
-  prepareHeaders: async (headers) => {
-    const token = await getToken();
+  baseUrl: ADMIN_GRAPHQL_URL,
+  prepareHeaders: (headers) => {
+    const token = readSession()?.token;
     if (token) headers.set("authorization", `Bearer ${token}`);
     return headers;
   },
@@ -37,6 +38,10 @@ const graphqlBaseQuery: BaseQueryFn<GraphQLRequest, unknown, GraphQLErrorPayload
   );
 
   if (result.error) {
+    // 401: the session ended or was never valid. 403: the address is no longer
+    // on the backend's allowlist. Either way it cannot be used again, and
+    // dropping it sends AuthGate back to the sign-in page.
+    if (result.error.status === 401 || result.error.status === 403) clearSession();
     return { error: [{ message: `Request failed (${result.error.status})` }] };
   }
 

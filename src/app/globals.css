@@ -35,30 +35,6 @@
   --animate-global-loader: global-loader 1.2s ease-in-out infinite;
 }
 
-/* Colours for Clerk's sign-in and account menu, which sit outside Tailwind.
-   They are CSS variables so both follow the `dark` class on their own, with no
-   theme state to pass to ClerkProvider. See lib/clerkAppearance.ts. */
-:root {
-  --clerk-background: #ffffff;
-  --clerk-foreground: #111827;
-  --clerk-muted: #f3f4f6;
-  --clerk-muted-foreground: #6b7280;
-  --clerk-input: #ffffff;
-  --clerk-input-foreground: #111827;
-  --clerk-border: #9ca3af; /* stronger than the app's: Clerk draws it at low alpha */
-  --clerk-neutral: #111827;
-}
-.dark {
-  --clerk-background: #14141c;
-  --clerk-foreground: #f3f4f6;
-  --clerk-muted: #1d1d28;
-  --clerk-muted-foreground: #9ca3af;
-  --clerk-input: #1d1d28;
-  --clerk-input-foreground: #f3f4f6;
-  --clerk-border: #6b7280;
-  --clerk-neutral: #f3f4f6;
-}
-
 @keyframes global-loader {
   0% {
     transform: translateX(-100%);
