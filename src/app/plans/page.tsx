@@ -74,7 +74,7 @@ export default function PlansPage() {
           groups.map((group) => (
             <section key={group}>
               <h2 className="mb-2 text-sm font-semibold text-gray-900 dark:text-gray-100">{PRICE_GROUPS[group]}</h2>
-              <div className="card overflow-x-auto">
+              <div className="card relative overflow-x-auto">
                 <table className="min-w-full text-left text-sm">
                   <thead>
                     <tr className="border-b border-gray-200 text-xs tracking-[0.06em] text-gray-500 uppercase dark:border-dark-border dark:text-gray-400">

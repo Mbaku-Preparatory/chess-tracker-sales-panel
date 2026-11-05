@@ -4,7 +4,7 @@ import "./globals.css";
 
 import { AuthGate } from "@/components/AuthGate";
 import { GlobalLoader } from "@/components/GlobalLoader";
-import { Navbar } from "@/components/Navbar";
+import { AppShell } from "@/components/AppShell";
 import { THEME_SCRIPT } from "@/lib/theme";
 import { ReduxProvider } from "@/redux/Providers";
 
@@ -32,10 +32,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-full flex-col">
         <ReduxProvider>
           <GlobalLoader />
-          <Navbar />
-          <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
+          <AppShell>
             <AuthGate>{children}</AuthGate>
-          </main>
+          </AppShell>
         </ReduxProvider>
       </body>
     </html>
