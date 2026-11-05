@@ -45,7 +45,7 @@ export default function AuditPage() {
       {isLoading && <div className="card p-6 text-sm text-gray-500">Loading…</div>}
       {isError && <div className="banner-danger">Couldn&apos;t load the audit trail.</div>}
       {trail && (
-        <div className="card overflow-x-auto">
+        <div className="card relative overflow-x-auto">
           <table className="min-w-full text-left text-sm">
             <thead>
               <tr className="border-b border-gray-200 text-xs tracking-[0.06em] text-gray-500 uppercase dark:border-dark-border dark:text-gray-400">

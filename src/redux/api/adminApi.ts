@@ -177,6 +177,20 @@ const GRANT_FIELDS = `
   createdAt createdBy voidedAt voidedBy voidReason plan { code name }
 `;
 
+/** One slice of the users list, and how many match across every slice. */
+export interface UsersPage {
+  count: number;
+  results: AdminUser[];
+}
+
+export interface UsersPageArgs {
+  search: string;
+  /** "", "paying", or a SubscriptionStatus. */
+  status: string;
+  offset: number;
+  limit: number;
+}
+
 export interface AdminUser {
   id: string;
   username: string;
@@ -207,15 +221,19 @@ export const adminApi = createApi({
   baseQuery: graphqlBaseQuery,
   tagTypes: ["User", "Grant", "Plan", "Overview", "Audit"],
   endpoints: (builder) => ({
-    getUsers: builder.query<AdminUser[], void>({
-      query: () => ({
+    getUsersPage: builder.query<UsersPage, UsersPageArgs>({
+      query: ({ search, status, offset, limit }) => ({
         query: `
-          query AdminUsers {
-            users { ${USER_FIELDS} }
+          query UsersPage($search: String, $status: String, $offset: Int, $limit: Int) {
+            usersPage(search: $search, status: $status, offset: $offset, limit: $limit) {
+              count
+              results { ${USER_FIELDS} }
+            }
           }
         `,
+        variables: { search, status, offset, limit },
       }),
-      transformResponse: (response: { users: AdminUser[] }) => response.users,
+      transformResponse: (response: { usersPage: UsersPage }) => response.usersPage,
       providesTags: ["User"],
     }),
 
@@ -393,7 +411,7 @@ export const adminApi = createApi({
 });
 
 export const {
-  useGetUsersQuery,
+  useGetUsersPageQuery,
   useUpdateUserMutation,
   useSetUserDisabledMutation,
   useDeleteUserMutation,

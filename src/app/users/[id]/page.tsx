@@ -168,7 +168,7 @@ export default function UserPage() {
 
       <section>
         <h2 className="mb-3 text-lg font-semibold text-gray-900 dark:text-gray-100">Payments and grants</h2>
-        <div className="card overflow-x-auto">
+        <div className="card relative overflow-x-auto">
           <table className="min-w-full text-left text-sm">
             <thead>
               <tr className="border-b border-gray-200 text-xs tracking-[0.06em] text-gray-500 uppercase dark:border-dark-border dark:text-gray-400">
