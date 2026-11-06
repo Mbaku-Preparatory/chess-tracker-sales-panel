@@ -78,8 +78,16 @@ export interface SubscriptionSummary {
   lifetimePaid: Money[];
   paidGrants: number;
   priceGroup: string;
-  customPrice: string | null;
-  customCurrency: string;
+  /** Bomahut-style negotiated prices: they replace the plan price for this user. */
+  negotiatedMonthly: string | null;
+  negotiatedAnnual: string | null;
+  negotiatedCurrency: string;
+  /** Agreed pay-by date: they have access until then, paid or not. */
+  negotiatedUntil: string | null;
+  /** The later of paidUntil and negotiatedUntil. */
+  accessUntil: string | null;
+  /** The time they are in right now is their free trial. */
+  onTrial: boolean;
   foundingMember: boolean;
   termsNote: string;
   health: Health | null;
@@ -109,7 +117,8 @@ export interface Plan {
   id: string;
   code: string;
   name: string;
-  priceGroup: "KE" | "A" | "B" | "C";
+  priceGroup: "EA" | "A" | "B" | "C";
+  period: "month" | "year";
   days: number;
   price: string;
   currency: string;
@@ -118,12 +127,26 @@ export interface Plan {
 }
 
 export interface Overview {
+  /** SUBSCRIPTIONS_ENFORCED on the API: whether anyone is refused yet. */
+  paywallOn: boolean;
+  onTrial: number;
+  /** Reminder emails that would go out if Send reminders were pressed now. */
+  remindersDue: number;
   users: number;
   byStatus: { status: SubscriptionStatus; count: number }[];
   expiringSoon: number;
   newSubscribersThisMonth: number;
   revenueThisMonth: Money[];
   revenueAllTime: Money[];
+}
+
+/** What one press of Send reminders did. */
+export interface ReminderRun {
+  sentEnding: number;
+  sentEnded: number;
+  failed: number;
+  /** Over the per-run ceiling: they go on the next press. */
+  leftForNextRun: number;
 }
 
 export interface AuditEntry {
@@ -150,9 +173,14 @@ export interface GrantInput {
 
 export interface TermsInput {
   userId: string;
-  customPrice?: string;
-  customCurrency?: string;
-  clearCustomPrice?: boolean;
+  negotiatedMonthly?: string;
+  negotiatedAnnual?: string;
+  negotiatedCurrency?: string;
+  clearNegotiatedMonthly?: boolean;
+  clearNegotiatedAnnual?: boolean;
+  /** ISO date-time. */
+  negotiatedUntil?: string;
+  clearNegotiatedUntil?: boolean;
   foundingMember?: boolean;
   priceGroup?: string;
   termsNote?: string;
@@ -160,8 +188,8 @@ export interface TermsInput {
 
 const SUBSCRIPTION_FIELDS = `
   subscription {
-    status paidUntil currentPlan paidGrants priceGroup customPrice customCurrency
-    foundingMember termsNote funnelStage
+    status paidUntil currentPlan paidGrants priceGroup negotiatedMonthly negotiatedAnnual
+    negotiatedCurrency negotiatedUntil accessUntil onTrial foundingMember termsNote funnelStage
     lifetimePaid { currency amount }
     health { score label payment tenure engagement lastActive }
   }
@@ -320,7 +348,7 @@ export const adminApi = createApi({
 
     getPlans: builder.query<Plan[], void>({
       query: () => ({
-        query: `{ plans { id code name priceGroup days price currency isOnSale updatedAt } }`,
+        query: `{ plans { id code name priceGroup period days price currency isOnSale updatedAt } }`,
       }),
       transformResponse: (r: { plans: Plan[] }) => r.plans,
       providesTags: ["Plan"],
@@ -329,6 +357,7 @@ export const adminApi = createApi({
     getOverview: builder.query<Overview, void>({
       query: () => ({
         query: `{ overview {
+          paywallOn onTrial remindersDue
           users expiringSoon newSubscribersThisMonth
           byStatus { status count }
           revenueThisMonth { currency amount }
@@ -381,25 +410,46 @@ export const adminApi = createApi({
     setSubscriptionTerms: builder.mutation<boolean, TermsInput>({
       query: (input) => ({
         query: `mutation Terms(
-          $userId: ID!, $customPrice: Decimal, $customCurrency: String, $clearCustomPrice: Boolean,
-          $foundingMember: Boolean, $priceGroup: String, $termsNote: String
+          $userId: ID!, $negotiatedMonthly: Decimal, $negotiatedAnnual: Decimal, $negotiatedCurrency: String,
+          $clearNegotiatedMonthly: Boolean, $clearNegotiatedAnnual: Boolean, $negotiatedUntil: DateTime,
+          $clearNegotiatedUntil: Boolean, $foundingMember: Boolean, $priceGroup: String, $termsNote: String
         ) {
-          setSubscriptionTerms(userId: $userId, customPrice: $customPrice, customCurrency: $customCurrency,
-            clearCustomPrice: $clearCustomPrice, foundingMember: $foundingMember,
-            priceGroup: $priceGroup, termsNote: $termsNote) { ok }
+          setSubscriptionTerms(userId: $userId, negotiatedMonthly: $negotiatedMonthly,
+            negotiatedAnnual: $negotiatedAnnual, negotiatedCurrency: $negotiatedCurrency,
+            clearNegotiatedMonthly: $clearNegotiatedMonthly, clearNegotiatedAnnual: $clearNegotiatedAnnual,
+            negotiatedUntil: $negotiatedUntil, clearNegotiatedUntil: $clearNegotiatedUntil,
+            foundingMember: $foundingMember, priceGroup: $priceGroup, termsNote: $termsNote) { ok }
         }`,
         // Only the keys present are sent, so untouched terms stay untouched.
         variables: { ...input },
       }),
       transformResponse: (r: { setSubscriptionTerms: { ok: boolean } }) => r.setSubscriptionTerms.ok,
-      invalidatesTags: ["User", "Audit"],
+      // Overview too: a pay-by date changes who has access and who is due a reminder.
+      invalidatesTags: ["User", "Audit", "Overview"],
+    }),
+
+    sendReminders: builder.mutation<ReminderRun, void>({
+      query: () => ({
+        query: `mutation { sendReminders { sentEnding sentEnded failed leftForNextRun } }`,
+      }),
+      transformResponse: (r: { sendReminders: ReminderRun }) => r.sendReminders,
+      invalidatesTags: ["Overview", "Audit"],
+    }),
+
+    sendReminder: builder.mutation<"ending" | "ended", string>({
+      query: (userId) => ({
+        query: `mutation SendReminder($userId: ID!) { sendReminder(userId: $userId) { kind } }`,
+        variables: { userId },
+      }),
+      transformResponse: (r: { sendReminder: { kind: "ending" | "ended" } }) => r.sendReminder.kind,
+      invalidatesTags: ["Overview", "Audit"],
     }),
 
     updatePlan: builder.mutation<Plan, { code: string; price?: string; name?: string; days?: number; isOnSale?: boolean }>({
       query: (input) => ({
         query: `mutation UpdatePlan($code: String!, $price: Decimal, $name: String, $days: Int, $isOnSale: Boolean) {
           updatePlan(code: $code, price: $price, name: $name, days: $days, isOnSale: $isOnSale) {
-            plan { id code name priceGroup days price currency isOnSale updatedAt }
+            plan { id code name priceGroup period days price currency isOnSale updatedAt }
           }
         }`,
         variables: { ...input },
@@ -424,6 +474,8 @@ export const {
   useVoidGrantMutation,
   useSetSubscriptionTermsMutation,
   useUpdatePlanMutation,
+  useSendRemindersMutation,
+  useSendReminderMutation,
 } = adminApi;
 
 /**

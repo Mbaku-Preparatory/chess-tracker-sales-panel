@@ -31,7 +31,7 @@ export function GrantDialog({ user, mode, onClose }: { user: AdminUser; mode: Mo
   const [planCode, setPlanCode] = useState("");
   const [days, setDays] = useState("30");
   const [amount, setAmount] = useState("");
-  const [currency, setCurrency] = useState(sub.customCurrency || "KES");
+  const [currency, setCurrency] = useState(sub.negotiatedCurrency || "KES");
   const [source, setSource] = useState<GrantInput["source"]>(mode === "payment" ? "manual_payment" : "complimentary");
   const [reference, setReference] = useState("");
   const [note, setNote] = useState("");
@@ -44,7 +44,8 @@ export function GrantDialog({ user, mode, onClose }: { user: AdminUser; mode: Mo
     setDays(String(plan.days));
     setCurrency(plan.currency);
     // An agreed price for this user wins over the list price.
-    const agreed = sub.customPrice && sub.customCurrency === plan.currency ? sub.customPrice : null;
+    const negotiated = plan.period === "year" ? sub.negotiatedAnnual : sub.negotiatedMonthly;
+    const agreed = negotiated && sub.negotiatedCurrency === plan.currency ? negotiated : null;
     if (mode === "payment") setAmount(agreed ?? plan.price);
   };
 

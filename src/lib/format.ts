@@ -47,10 +47,10 @@ export const HEALTH: Record<Health["label"], { label: string; variant: BadgeVari
 };
 
 export const PRICE_GROUPS: Record<string, string> = {
-  KE: "Kenya (KES, M-Pesa)",
-  A: "Group A (US, UK, EU, Gulf…)",
+  EA: "East Africa (KES)",
+  A: "Group A (US, UK, Western Europe, Gulf…)",
   B: "Group B (Eastern Europe, Latin America…)",
-  C: "Group C (India, Africa, South Asia…)",
+  C: "Group C (rest of Africa, South Asia…)",
 };
 
 export const ACTIONS: Record<string, string> = {
@@ -58,6 +58,8 @@ export const ACTIONS: Record<string, string> = {
   void_grant: "Voided a grant",
   set_terms: "Changed terms",
   update_plan: "Changed a plan",
+  send_reminders: "Sent reminders",
+  send_reminder: "Sent a reminder",
   update_user: "Edited a user",
   suspend_user: "Suspended a user",
   restore_user: "Restored a user",
