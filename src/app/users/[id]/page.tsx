@@ -8,14 +8,36 @@ import { Badge } from "@/components/Badge";
 import { GrantDialog } from "@/components/GrantDialog";
 import { TermsDialog } from "@/components/TermsDialog";
 import { VoidGrantDialog } from "@/components/VoidGrantDialog";
-import { ACTIONS, daysUntil, formatAmount, formatDate, formatMoney, FUNNEL, HEALTH, PRICE_GROUPS, STATUS } from "@/lib/format";
+import { SpinnerIcon } from "@/components/icons";
+import {
+  ACTIONS, daysUntil, errorMessage, formatAmount, formatDate, formatMoney, FUNNEL, HEALTH, PRICE_GROUPS, STATUS,
+} from "@/lib/format";
 import {
   useGetAuditTrailQuery,
   useGetGrantsQuery,
   useGetUserQuery,
+  useSendReminderMutation,
   type Grant,
   type Health,
 } from "@/redux/api/adminApi";
+
+/** Email this user the reminder that fits now (ending soon, or ended), even
+ * if one has gone already. The overview's Send reminders covers everyone. */
+function SendReminderButton({ userId, disabled }: { userId: string; disabled: boolean }) {
+  const [send, { isLoading, error, data, reset }] = useSendReminderMutation();
+  return (
+    <span className="flex flex-col items-start gap-1">
+      <button type="button" className="btn-secondary" disabled={disabled || isLoading}
+        title={disabled ? "They have never had access, so there is nothing to remind them of" : undefined}
+        onClick={() => { reset(); void send(userId); }}>
+        {isLoading && <SpinnerIcon className="h-3.5 w-3.5" />}
+        Send reminder
+      </button>
+      {data && <span role="status" className="text-xs text-brand-700 dark:text-brand-300">Sent the &ldquo;{data === "ending" ? "ending soon" : "has ended"}&rdquo; email.</span>}
+      {error && <span className="text-xs text-red-600 dark:text-red-400">{errorMessage(error, "Couldn't send it.")}</span>}
+    </span>
+  );
+}
 
 function Stat({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
   return (
@@ -101,7 +123,8 @@ export default function UserPage() {
 
   const sub = user.subscription;
   const status = STATUS[sub.status];
-  const left = daysUntil(sub.paidUntil);
+  // A pay-by date can run past the paid time: access ends at the later one.
+  const left = daysUntil(sub.accessUntil ?? sub.paidUntil);
 
   return (
     <div className="space-y-8">
@@ -118,6 +141,7 @@ export default function UserPage() {
             <button type="button" className="btn-primary" onClick={() => setDialog("payment")}>Record payment</button>
             <button type="button" className="btn-secondary" onClick={() => setDialog("free")}>Give free time</button>
             <button type="button" className="btn-secondary" onClick={() => setDialog("terms")}>Edit terms</button>
+            <SendReminderButton userId={user.id} disabled={!sub.paidUntil} />
           </div>
         </div>
       </div>
@@ -128,19 +152,29 @@ export default function UserPage() {
           <dl className="grid gap-x-8 gap-y-5 sm:grid-cols-3">
             <Stat label="Status" hint={status.hint}>
               <Badge label={status.label} variant={status.variant} />
+              {sub.onTrial && <span className="ml-2"><Badge label="Free trial" variant="brand" /></span>}
             </Stat>
             <Stat label="Access until"
               hint={left === null ? undefined : left >= 0 ? `${left} day${left === 1 ? "" : "s"} left` : `Ended ${-left} day${left === -1 ? "" : "s"} ago`}>
-              {formatDate(sub.paidUntil, false)}
+              {formatDate(sub.accessUntil ?? sub.paidUntil, false)}
             </Stat>
             <Stat label="Plan">{sub.currentPlan ?? "—"}</Stat>
             <Stat label="Lifetime paid" hint={`${sub.paidGrants} payment${sub.paidGrants === 1 ? "" : "s"}`}>
               {formatMoney(sub.lifetimePaid)}
             </Stat>
             <Stat label="Price group">{sub.priceGroup ? PRICE_GROUPS[sub.priceGroup] : "Not set yet"}</Stat>
-            <Stat label="Agreed price" hint={sub.termsNote || undefined}>
-              {sub.customPrice ? formatAmount(sub.customPrice, sub.customCurrency) : "Plan price"}
+            <Stat label="Negotiated price" hint={sub.termsNote || undefined}>
+              {sub.negotiatedMonthly || sub.negotiatedAnnual ? (
+                <>
+                  {sub.negotiatedMonthly ? `${formatAmount(sub.negotiatedMonthly, sub.negotiatedCurrency)} / month` : "Plan price monthly"}
+                  <br />
+                  {sub.negotiatedAnnual ? `${formatAmount(sub.negotiatedAnnual, sub.negotiatedCurrency)} / year` : "Plan price annually"}
+                </>
+              ) : "Plan price"}
               {sub.foundingMember && <span className="ml-2"><Badge label="Founding member" variant="brand" /></span>}
+            </Stat>
+            <Stat label="Pay-by date" hint={sub.negotiatedUntil ? "Access until then, paid or not" : undefined}>
+              {sub.negotiatedUntil ? formatDate(sub.negotiatedUntil, false) : "—"}
             </Stat>
             <Stat label="Funnel">{FUNNEL[sub.funnelStage]}</Stat>
             <Stat label="Joined">{formatDate(user.dateJoined, false)}</Stat>
