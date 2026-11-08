@@ -198,6 +198,10 @@ const SUBSCRIPTION_FIELDS = `
 const USER_FIELDS = `
   id username email firstName lastName isActive isDisabled dateJoined lastLogin
   playersCount booksCount ${SUBSCRIPTION_FIELDS}
+  signupSource {
+    utmSource utmMedium utmCampaign utmTerm utmContent gclid fbclid
+    fromLink referrerHost landingPath firstSeenAt
+  }
 `;
 
 const GRANT_FIELDS = `
@@ -215,8 +219,39 @@ export interface UsersPageArgs {
   search: string;
   /** "", "paying", or a SubscriptionStatus. */
   status: string;
+  /** "", a utm_source from getSignupSources, or NO_SOURCE. */
+  source: string;
   offset: number;
   limit: number;
+}
+
+/**
+ * Where an account came from: the link's utm_* or, with none, a guess from the
+ * referrer (fromLink false). The browser's claim; good for counting channels.
+ */
+export interface SignupSource {
+  utmSource: string;
+  utmMedium: string;
+  utmCampaign: string;
+  utmTerm: string;
+  utmContent: string;
+  gclid: string;
+  fbclid: string;
+  fromLink: boolean;
+  referrerHost: string;
+  landingPath: string;
+  firstSeenAt: string | null;
+}
+
+/** The source filter's value for accounts with no source recorded. Matches the API. */
+export const NO_SOURCE = "(none)";
+
+export interface SourceCount {
+  /** utm_source, or NO_SOURCE. */
+  source: string;
+  signups: number;
+  /** Of those, how many have ever paid. */
+  paid: number;
 }
 
 export interface AdminUser {
@@ -232,6 +267,7 @@ export interface AdminUser {
   playersCount: number;
   booksCount: number;
   subscription: SubscriptionSummary;
+  signupSource: SignupSource | null;
 }
 
 /** Fields the panel may edit. All optional — only what's sent gets written. */
@@ -250,18 +286,24 @@ export const adminApi = createApi({
   tagTypes: ["User", "Grant", "Plan", "Overview", "Audit"],
   endpoints: (builder) => ({
     getUsersPage: builder.query<UsersPage, UsersPageArgs>({
-      query: ({ search, status, offset, limit }) => ({
+      query: ({ search, status, source, offset, limit }) => ({
         query: `
-          query UsersPage($search: String, $status: String, $offset: Int, $limit: Int) {
-            usersPage(search: $search, status: $status, offset: $offset, limit: $limit) {
+          query UsersPage($search: String, $status: String, $source: String, $offset: Int, $limit: Int) {
+            usersPage(search: $search, status: $status, source: $source, offset: $offset, limit: $limit) {
               count
               results { ${USER_FIELDS} }
             }
           }
         `,
-        variables: { search, status, offset, limit },
+        variables: { search, status, source, offset, limit },
       }),
       transformResponse: (response: { usersPage: UsersPage }) => response.usersPage,
+      providesTags: ["User"],
+    }),
+
+    getSignupSources: builder.query<SourceCount[], void>({
+      query: () => ({ query: `{ signupSources { source signups paid } }` }),
+      transformResponse: (r: { signupSources: SourceCount[] }) => r.signupSources,
       providesTags: ["User"],
     }),
 
@@ -462,6 +504,7 @@ export const adminApi = createApi({
 
 export const {
   useGetUsersPageQuery,
+  useGetSignupSourcesQuery,
   useUpdateUserMutation,
   useSetUserDisabledMutation,
   useDeleteUserMutation,

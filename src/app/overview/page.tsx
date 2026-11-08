@@ -5,7 +5,14 @@ import { useState } from "react";
 
 import { SpinnerIcon } from "@/components/icons";
 import { errorMessage, formatMoney, STATUS } from "@/lib/format";
-import { useGetOverviewQuery, useSendRemindersMutation, type Overview, type ReminderRun } from "@/redux/api/adminApi";
+import {
+  NO_SOURCE,
+  useGetOverviewQuery,
+  useGetSignupSourcesQuery,
+  useSendRemindersMutation,
+  type Overview,
+  type ReminderRun,
+} from "@/redux/api/adminApi";
 
 function Card({ label, value, hint, href }: { label: string; value: React.ReactNode; hint?: string; href?: string }) {
   const body = (
@@ -78,6 +85,56 @@ function Paywall({ o }: { o: Overview }) {
   );
 }
 
+/**
+ * Which channels bring sign-ups, and which bring people who pay. "Paid" is
+ * ever paid (a Paystack or hand-recorded payment); trials and free time are not.
+ * Accounts made before sources were recorded sit under "No source recorded".
+ */
+function Sources() {
+  const { data: rows, isError } = useGetSignupSourcesQuery();
+  const td = "px-3 py-2 text-right tabular-nums";
+  return (
+    <section className="card p-5">
+      <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Sign-ups by source</h2>
+      <p className="mt-1 mb-3 text-xs text-gray-500 dark:text-gray-400">
+        From the link&apos;s utm_source, or guessed from the site that sent them. Every account, all time.
+      </p>
+      {isError && <p className="banner-danger">Couldn&apos;t load the sources.</p>}
+      {rows && rows.length === 0 && <p className="text-sm text-gray-500 dark:text-gray-400">No accounts yet.</p>}
+      {rows && rows.length > 0 && (
+        <div className="relative overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-200 text-xs tracking-[0.06em] text-gray-500 uppercase dark:border-dark-border dark:text-gray-400">
+                <th scope="col" className="px-3 py-2 text-left font-medium">Source</th>
+                <th scope="col" className="px-3 py-2 text-right font-medium">Sign-ups</th>
+                <th scope="col" className="px-3 py-2 text-right font-medium">Paid</th>
+                <th scope="col" className="px-3 py-2 text-right font-medium">Paid %</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-dark-border">
+              {rows.map((r) => (
+                <tr key={r.source}>
+                  <td className="px-3 py-2">
+                    <Link href={`/?source=${encodeURIComponent(r.source)}`} className="text-gray-900 hover:underline dark:text-gray-100">
+                      {r.source === NO_SOURCE ? "No source recorded" : r.source}
+                    </Link>
+                  </td>
+                  <td className={`${td} text-gray-900 dark:text-gray-100`}>{r.signups}</td>
+                  <td className={`${td} text-gray-900 dark:text-gray-100`}>{r.paid}</td>
+                  <td className={`${td} text-gray-500 dark:text-gray-400`}>
+                    {r.signups ? `${Math.round((100 * r.paid) / r.signups)}%` : "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default function OverviewPage() {
   const { data: o, isLoading, isError } = useGetOverviewQuery();
   const count = (s: keyof typeof STATUS) => o?.byStatus.find((b) => b.status === s)?.count ?? 0;
@@ -114,6 +171,7 @@ export default function OverviewPage() {
               ))}
             </div>
           </section>
+          <Sources />
         </div>
       )}
     </div>

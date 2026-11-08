@@ -18,9 +18,12 @@ import {
 } from "@/components/icons";
 import { daysUntil, formatDate, FUNNEL, HEALTH, STATUS } from "@/lib/format";
 import {
+  NO_SOURCE,
+  useGetSignupSourcesQuery,
   useGetUsersPageQuery,
   useSetUserDisabledMutation,
   type AdminUser,
+  type SignupSource,
 } from "@/redux/api/adminApi";
 
 const th = "px-4 py-3 font-medium";
@@ -79,6 +82,23 @@ function HealthCell({ user }: { user: AdminUser }) {
       <span className="font-semibold tabular-nums text-gray-900 dark:text-gray-100">{h.score}</span>
       <Badge label={look.label} variant={look.variant} />
     </span>
+  );
+}
+
+/** "google / organic", or "—" for an account with no source recorded. */
+function channel(s: SignupSource | null): string {
+  if (!s || !s.utmSource) return "—";
+  return s.utmMedium ? `${s.utmSource} / ${s.utmMedium}` : s.utmSource;
+}
+
+function SourceCell({ user }: { user: AdminUser }) {
+  const s = user.signupSource;
+  if (!s || !s.utmSource) return <span className="text-gray-400 dark:text-gray-600">—</span>;
+  return (
+    <div className="flex flex-col items-start gap-0.5" title={s.fromLink ? "From the link's utm tags" : "Guessed from the referrer"}>
+      <span className="whitespace-nowrap text-gray-900 dark:text-gray-100">{channel(s)}</span>
+      {s.utmCampaign && <span className="text-xs whitespace-nowrap text-gray-500 dark:text-gray-400">{s.utmCampaign}</span>}
+    </div>
   );
 }
 
@@ -149,6 +169,8 @@ function UsersList() {
   const pathname = usePathname();
   const params = useSearchParams();
   const statusFilter = params.get("status") ?? "";
+  const sourceFilter = params.get("source") ?? "";
+  const { data: sources } = useGetSignupSourcesQuery();
   const [searchInput, setSearchInput] = useState("");
   const search = useDebounced(searchInput.trim(), 300);
 
@@ -157,7 +179,7 @@ function UsersList() {
   // first render after the change already asks for page one. Storing the reset
   // matters: deriving page one without storing it brought the old page back
   // when the search was cleared again.
-  const filterKey = `${search}\u0000${statusFilter}`;
+  const filterKey = `${search}\u0000${statusFilter}\u0000${sourceFilter}`;
   const [paging, setPaging] = useState({ key: filterKey, page: 0 });
   if (paging.key !== filterKey) setPaging({ key: filterKey, page: 0 });
   const page = paging.key === filterKey ? paging.page : 0;
@@ -168,17 +190,23 @@ function UsersList() {
   // filter, fetches afresh, never from an older copy.
   const offset = Math.floor((page * PAGE_SIZE) / CHUNK) * CHUNK;
   const { currentData, isLoading, isFetching, isError, error, refetch } = useGetUsersPageQuery(
-    { search, status: statusFilter, offset, limit: CHUNK },
+    { search, status: statusFilter, source: sourceFilter, offset, limit: CHUNK },
     { refetchOnMountOrArgChange: true },
   );
   const count = currentData?.count ?? 0;
   const pages = Math.max(1, Math.ceil(count / PAGE_SIZE));
   const start = page * PAGE_SIZE - offset;
   const users = currentData?.results.slice(start, start + PAGE_SIZE);
-  const filtered = Boolean(search || statusFilter);
+  const filtered = Boolean(search || statusFilter || sourceFilter);
 
-  const setStatusFilter = (value: string) =>
-    router.replace(value ? `${pathname}?status=${value}` : pathname, { scroll: false });
+  // Both filters live in the URL, so the overview can link straight to one.
+  const setFilter = (name: "status" | "source", value: string) => {
+    const next = new URLSearchParams(params.toString());
+    if (value) next.set(name, value);
+    else next.delete(name);
+    const query = next.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  };
   const [setUserDisabled, { isLoading: isToggling }] = useSetUserDisabledMutation();
 
   const [editing, setEditing] = useState<AdminUser | null>(null);
@@ -225,9 +253,21 @@ function UsersList() {
           onChange={(e) => setSearchInput(e.target.value)}
           aria-label="Search users"
         />
-        <select className="field sm:w-auto" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} aria-label="Filter by subscription">
+        <select className="field sm:w-auto" value={statusFilter} onChange={(e) => setFilter("status", e.target.value)} aria-label="Filter by subscription">
           {STATUS_FILTERS.map((f) => (
             <option key={f.value} value={f.value}>{f.label}</option>
+          ))}
+        </select>
+        <select className="field sm:w-auto" value={sourceFilter} onChange={(e) => setFilter("source", e.target.value)} aria-label="Filter by where they came from">
+          <option value="">Every source</option>
+          {/* The current filter stays selectable even before the counts arrive. */}
+          {sourceFilter && !sources?.some((s) => s.source === sourceFilter) && (
+            <option value={sourceFilter}>{sourceFilter === NO_SOURCE ? "No source recorded" : sourceFilter}</option>
+          )}
+          {sources?.map((s) => (
+            <option key={s.source} value={s.source}>
+              {s.source === NO_SOURCE ? "No source recorded" : s.source} ({s.signups})
+            </option>
           ))}
         </select>
       </div>
@@ -259,6 +299,7 @@ function UsersList() {
                   <th scope="col" className={th}>Health</th>
                   <th scope="col" className={th}>Players</th>
                   <th scope="col" className={th}>Books</th>
+                  <th scope="col" className={th}>Source</th>
                   <th scope="col" className={th}>Joined</th>
                   <th scope="col" className={`${th} ${pinned} text-right`}>Actions</th>
                 </tr>
@@ -320,6 +361,9 @@ function UsersList() {
                         <td className="px-4 py-3 text-gray-700 tabular-nums dark:text-gray-300">
                           {user.booksCount}
                         </td>
+                        <td className="px-4 py-3">
+                          <SourceCell user={user} />
+                        </td>
                         <td className="px-4 py-3 whitespace-nowrap text-gray-500 dark:text-gray-400">
                           {formatDate(user.dateJoined)}
                         </td>
@@ -364,7 +408,7 @@ function UsersList() {
                       </tr>
                       {open && (
                         <tr id={detailsId} className="bg-gray-50 dark:bg-dark-elevated/50">
-                          <td colSpan={9} className="px-4 py-3">
+                          <td colSpan={10} className="px-4 py-3">
                             {/* Sticky and capped on a phone, where the row is wider
                                 than the card: the details stay in view, not out past
                                 the scroll. */}
@@ -377,6 +421,19 @@ function UsersList() {
                               <Detail label="Email">{user.email}</Detail>
                               <Detail label="Last login">{formatDate(user.lastLogin)}</Detail>
                               <Detail label="Funnel">{FUNNEL[user.subscription.funnelStage]}</Detail>
+                              <Detail label="Came from">
+                                {channel(user.signupSource)}
+                                {user.signupSource && !user.signupSource.fromLink && user.signupSource.utmSource && (
+                                  <span className="text-gray-500 dark:text-gray-400"> (from the referrer)</span>
+                                )}
+                              </Detail>
+                              <Detail label="Campaign">
+                                {[user.signupSource?.utmCampaign, user.signupSource?.utmTerm, user.signupSource?.utmContent]
+                                  .filter(Boolean)
+                                  .join(" · ") || "—"}
+                              </Detail>
+                              <Detail label="First page">{user.signupSource?.landingPath || "—"}</Detail>
+                              <Detail label="First visit">{formatDate(user.signupSource?.firstSeenAt)}</Detail>
                             </dl>
                           </td>
                         </tr>
@@ -386,7 +443,7 @@ function UsersList() {
                 })}
                 {users.length === 0 && (
                   <tr>
-                    <td colSpan={9} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">
+                    <td colSpan={10} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">
                       {filtered ? "No one matches." : "No users yet."}
                     </td>
                   </tr>
