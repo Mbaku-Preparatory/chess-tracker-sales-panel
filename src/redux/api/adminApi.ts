@@ -270,6 +270,28 @@ export interface AdminUser {
   signupSource: SignupSource | null;
 }
 
+/** A "Report a problem" from the app, with what the backend attached when it
+ * was sent (support/services.py:context_for). */
+export interface SupportRequest {
+  id: string;
+  category: "payment" | "import" | "other";
+  message: string;
+  page: string;
+  client: string;
+  createdAt: string;
+  resolvedAt: string | null;
+  userId: string;
+  username: string;
+  email: string;
+  context: {
+    access_until: string | null;
+    last_payment: { reference: string; status: string; amount: string; currency: string; purpose: string; created_at: string } | null;
+    last_import: { source: string; player: string; status: string; games_imported: number; error: string; created_at: string } | null;
+  };
+}
+
+const SUPPORT_FIELDS = "id category message page client createdAt resolvedAt userId username email context";
+
 /** Fields the panel may edit. All optional — only what's sent gets written. */
 export interface UpdateUserPatch {
   id: string;
@@ -283,7 +305,7 @@ export interface UpdateUserPatch {
 export const adminApi = createApi({
   reducerPath: "adminApi",
   baseQuery: graphqlBaseQuery,
-  tagTypes: ["User", "Grant", "Plan", "Overview", "Audit"],
+  tagTypes: ["User", "Grant", "Plan", "Overview", "Audit", "Support"],
   endpoints: (builder) => ({
     getUsersPage: builder.query<UsersPage, UsersPageArgs>({
       query: ({ search, status, source, offset, limit }) => ({
@@ -421,6 +443,32 @@ export const adminApi = createApi({
       providesTags: ["Audit"],
     }),
 
+    getSupportRequests: builder.query<{ open: number; requests: SupportRequest[] }, { openOnly: boolean }>({
+      query: ({ openOnly }) => ({
+        query: `query Support($openOnly: Boolean) {
+          openSupportRequests
+          supportRequests(openOnly: $openOnly) { ${SUPPORT_FIELDS} }
+        }`,
+        variables: { openOnly },
+      }),
+      // context is a JSON string on the wire.
+      transformResponse: (r: { openSupportRequests: number; supportRequests: (Omit<SupportRequest, "context"> & { context: string })[] }) => ({
+        open: r.openSupportRequests,
+        requests: r.supportRequests.map((s) => ({ ...s, context: JSON.parse(s.context) })),
+      }),
+      providesTags: ["Support"],
+    }),
+
+    resolveSupportRequest: builder.mutation<void, { id: string; resolved: boolean }>({
+      query: (variables) => ({
+        query: `mutation Resolve($id: ID!, $resolved: Boolean) {
+          resolveSupportRequest(id: $id, resolved: $resolved) { request { id } }
+        }`,
+        variables,
+      }),
+      invalidatesTags: ["Support", "Audit"],
+    }),
+
     grantAccess: builder.mutation<Grant, GrantInput>({
       query: (input) => ({
         query: `mutation GrantAccess(
@@ -513,6 +561,8 @@ export const {
   useGetPlansQuery,
   useGetOverviewQuery,
   useGetAuditTrailQuery,
+  useGetSupportRequestsQuery,
+  useResolveSupportRequestMutation,
   useGrantAccessMutation,
   useVoidGrantMutation,
   useSetSubscriptionTermsMutation,

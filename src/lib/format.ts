@@ -64,6 +64,8 @@ export const ACTIONS: Record<string, string> = {
   suspend_user: "Suspended a user",
   restore_user: "Restored a user",
   delete_user: "Deleted a user",
+  resolve_support_request: "Resolved a report",
+  reopen_support_request: "Reopened a report",
 };
 
 /** A GraphQL error list (what adminApi rejects with) as one sentence. */

@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { forgetGoogleChoice } from "@/components/GoogleSignIn";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { CloseIcon, ListIcon, MenuIcon, OverviewIcon, TagIcon, UsersIcon } from "@/components/icons";
+import { CloseIcon, InboxIcon, ListIcon, MenuIcon, OverviewIcon, TagIcon, UsersIcon } from "@/components/icons";
 import { clearSession, useSession, type PanelSession } from "@/lib/session";
 import { adminApi } from "@/redux/api/adminApi";
 import { useAppDispatch } from "@/redux/hooks";
@@ -16,6 +16,7 @@ const NAV = [
   { href: "/overview", label: "Overview", Icon: OverviewIcon },
   { href: "/", label: "Users", Icon: UsersIcon },
   { href: "/plans", label: "Plans", Icon: TagIcon },
+  { href: "/reports", label: "Reports", Icon: InboxIcon },
   { href: "/audit", label: "Audit", Icon: ListIcon },
 ];
 
