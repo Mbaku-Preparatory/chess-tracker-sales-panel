@@ -104,7 +104,9 @@ function SourceCell({ user }: { user: AdminUser }) {
 
 const STATUS_FILTERS: { value: string; label: string }[] = [
   { value: "", label: "Everyone" },
+  // Paid time left. Trials and free time are under "With access now".
   { value: "paying", label: "Paying now" },
+  { value: "access", label: "With access now" },
   { value: "active", label: STATUS.active.label },
   { value: "expiring", label: STATUS.expiring.label },
   { value: "lapsed", label: STATUS.lapsed.label },
