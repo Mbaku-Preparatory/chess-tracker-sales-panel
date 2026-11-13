@@ -217,7 +217,7 @@ export interface UsersPage {
 
 export interface UsersPageArgs {
   search: string;
-  /** "", "paying", or a SubscriptionStatus. */
+  /** "", "paying" (paid time left), "access" (any access, trials included), or a SubscriptionStatus. */
   status: string;
   /** "", a utm_source from getSignupSources, or NO_SOURCE. */
   source: string;

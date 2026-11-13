@@ -151,7 +151,7 @@ export default function OverviewPage() {
         <div className="space-y-6">
           <Paywall o={o} />
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Card label="With access now" value={count("active") + count("expiring")} hint={`of ${o.users} accounts, ${o.onTrial} on trial`} href="/?status=paying" />
+            <Card label="With access now" value={count("active") + count("expiring")} hint={`of ${o.users} accounts, ${o.onTrial} on trial`} href="/?status=access" />
             <Card label="Expiring this week" value={o.expiringSoon} hint="Worth a reminder" href="/?status=expiring" />
             <Card label="New this month" value={o.newSubscribersThisMonth} hint="First access this month" />
             <Card label="Lapsed" value={count("lapsed")} hint="Ended in the last 30 days" href="/?status=lapsed" />
