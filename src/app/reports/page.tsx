@@ -77,9 +77,9 @@ function Report({ r }: { r: SupportRequest }) {
 }
 
 /**
- * "Report a problem" from the app. Each one is also emailed to the support
- * address, so replying from the inbox works too; this is where they are
- * marked done.
+ * Messages sent from the app's Help page. This is the only place they show:
+ * the backend emails nobody (backend #83), so check here. "Reply by email"
+ * opens a reply to the person; "Mark resolved" files it.
  */
 export default function ReportsPage() {
   const [openOnly, setOpenOnly] = useState(true);
