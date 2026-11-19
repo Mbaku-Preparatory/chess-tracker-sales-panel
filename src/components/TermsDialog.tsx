@@ -23,7 +23,7 @@ function endOfDay(date: string): string {
 /**
  * Per-user terms, as Bomahut's sales panel has them: a negotiated monthly and
  * annual price, a date they have agreed to pay by, and the rest (founding
- * member, price group, a note). Only what changed is sent.
+ * member, tester, price group, a note). Only what changed is sent.
  */
 export function TermsDialog({ user, onClose }: { user: AdminUser; onClose: () => void }) {
   const sub = user.subscription;
@@ -32,6 +32,7 @@ export function TermsDialog({ user, onClose }: { user: AdminUser; onClose: () =>
   const [currency, setCurrency] = useState(sub.negotiatedCurrency || (sub.priceGroup === "EA" || !sub.priceGroup ? "KES" : "USD"));
   const [payBy, setPayBy] = useState(toDateInput(sub.negotiatedUntil));
   const [foundingMember, setFoundingMember] = useState(sub.foundingMember);
+  const [tester, setTester] = useState(sub.tester);
   const [priceGroup, setPriceGroup] = useState(sub.priceGroup);
   const [termsNote, setTermsNote] = useState(sub.termsNote);
   const [save, { isLoading, error }] = useSetSubscriptionTermsMutation();
@@ -48,6 +49,7 @@ export function TermsDialog({ user, onClose }: { user: AdminUser; onClose: () =>
   if (payBy === "" && sub.negotiatedUntil) input.clearNegotiatedUntil = true;
   if (payBy !== "" && payBy !== toDateInput(sub.negotiatedUntil)) input.negotiatedUntil = endOfDay(payBy);
   if (foundingMember !== sub.foundingMember) input.foundingMember = foundingMember;
+  if (tester !== sub.tester) input.tester = tester;
   if (priceGroup !== sub.priceGroup) input.priceGroup = priceGroup;
   if (termsNote !== sub.termsNote) input.termsNote = termsNote;
   const dirty = Object.keys(input).length > 1;
@@ -121,6 +123,14 @@ export function TermsDialog({ user, onClose }: { user: AdminUser; onClose: () =>
           <span className="text-sm text-gray-700 dark:text-gray-300">
             <span className="font-medium">Founding member</span>
             <span className="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">One of the first subscribers, who keeps their price for life.</span>
+          </span>
+        </label>
+
+        <label className="flex items-start gap-2">
+          <input type="checkbox" className="mt-0.5 accent-brand-600" checked={tester} onChange={(e) => setTester(e.target.checked)} />
+          <span className="text-sm text-gray-700 dark:text-gray-300">
+            <span className="font-medium">Tester</span>
+            <span className="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">Tests the app for you: never asked to pay and never sent a reminder.</span>
           </span>
         </label>
 

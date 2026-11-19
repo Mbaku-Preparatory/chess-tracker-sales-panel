@@ -153,6 +153,7 @@ export default function UserPage() {
             <Stat label="Status" hint={status.hint}>
               <Badge label={status.label} variant={status.variant} />
               {sub.onTrial && <span className="ml-2"><Badge label="Free trial" variant="brand" /></span>}
+              {sub.tester && <span className="ml-2"><Badge label="Tester" variant="brand" /></span>}
             </Stat>
             <Stat label="Access until"
               hint={left === null ? undefined : left >= 0 ? `${left} day${left === 1 ? "" : "s"} left` : `Ended ${-left} day${left === -1 ? "" : "s"} ago`}>
