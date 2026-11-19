@@ -89,6 +89,8 @@ export interface SubscriptionSummary {
   /** The time they are in right now is their free trial. */
   onTrial: boolean;
   foundingMember: boolean;
+  /** Past the paywall and never sent a reminder, whatever their dates say. */
+  tester: boolean;
   termsNote: string;
   health: Health | null;
   funnelStage: FunnelStage;
@@ -182,6 +184,7 @@ export interface TermsInput {
   negotiatedUntil?: string;
   clearNegotiatedUntil?: boolean;
   foundingMember?: boolean;
+  tester?: boolean;
   priceGroup?: string;
   termsNote?: string;
 }
@@ -189,7 +192,7 @@ export interface TermsInput {
 const SUBSCRIPTION_FIELDS = `
   subscription {
     status paidUntil currentPlan paidGrants priceGroup negotiatedMonthly negotiatedAnnual
-    negotiatedCurrency negotiatedUntil accessUntil onTrial foundingMember termsNote funnelStage
+    negotiatedCurrency negotiatedUntil accessUntil onTrial foundingMember tester termsNote funnelStage
     lifetimePaid { currency amount }
     health { score label payment tenure engagement lastActive }
   }
@@ -502,13 +505,14 @@ export const adminApi = createApi({
         query: `mutation Terms(
           $userId: ID!, $negotiatedMonthly: Decimal, $negotiatedAnnual: Decimal, $negotiatedCurrency: String,
           $clearNegotiatedMonthly: Boolean, $clearNegotiatedAnnual: Boolean, $negotiatedUntil: DateTime,
-          $clearNegotiatedUntil: Boolean, $foundingMember: Boolean, $priceGroup: String, $termsNote: String
+          $clearNegotiatedUntil: Boolean, $foundingMember: Boolean, $tester: Boolean, $priceGroup: String,
+          $termsNote: String
         ) {
           setSubscriptionTerms(userId: $userId, negotiatedMonthly: $negotiatedMonthly,
             negotiatedAnnual: $negotiatedAnnual, negotiatedCurrency: $negotiatedCurrency,
             clearNegotiatedMonthly: $clearNegotiatedMonthly, clearNegotiatedAnnual: $clearNegotiatedAnnual,
             negotiatedUntil: $negotiatedUntil, clearNegotiatedUntil: $clearNegotiatedUntil,
-            foundingMember: $foundingMember, priceGroup: $priceGroup, termsNote: $termsNote) { ok }
+            foundingMember: $foundingMember, tester: $tester, priceGroup: $priceGroup, termsNote: $termsNote) { ok }
         }`,
         // Only the keys present are sent, so untouched terms stay untouched.
         variables: { ...input },

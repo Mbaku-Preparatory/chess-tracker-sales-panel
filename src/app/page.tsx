@@ -42,6 +42,7 @@ function StatusBadges({ user }: { user: AdminUser }) {
         <Badge label="Unverified" variant="warning" />
       )}
       {user.isDisabled && <Badge label="Suspended" variant="danger" />}
+      {user.subscription.tester && <Badge label="Tester" variant="brand" />}
     </div>
   );
 }
@@ -96,6 +97,7 @@ const STATUS_FILTERS: { value: string; label: string }[] = [
   // Paid time left. Trials and free time are under "With access now".
   { value: "paying", label: "Paying now" },
   { value: "access", label: "With access now" },
+  { value: "tester", label: "Testers" },
   { value: "active", label: STATUS.active.label },
   { value: "expiring", label: STATUS.expiring.label },
   { value: "lapsed", label: STATUS.lapsed.label },
