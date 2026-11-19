@@ -91,17 +91,6 @@ function channel(s: SignupSource | null): string {
   return s.utmMedium ? `${s.utmSource} / ${s.utmMedium}` : s.utmSource;
 }
 
-function SourceCell({ user }: { user: AdminUser }) {
-  const s = user.signupSource;
-  if (!s || !s.utmSource) return <span className="text-gray-400 dark:text-gray-600">—</span>;
-  return (
-    <div className="flex flex-col items-start gap-0.5" title={s.fromLink ? "From the link's utm tags" : "Guessed from the referrer"}>
-      <span className="whitespace-nowrap text-gray-900 dark:text-gray-100">{channel(s)}</span>
-      {s.utmCampaign && <span className="text-xs whitespace-nowrap text-gray-500 dark:text-gray-400">{s.utmCampaign}</span>}
-    </div>
-  );
-}
-
 const STATUS_FILTERS: { value: string; label: string }[] = [
   { value: "", label: "Everyone" },
   // Paid time left. Trials and free time are under "With access now".
@@ -298,10 +287,8 @@ function UsersList() {
                   <th scope="col" className={th}>Username</th>
                   <th scope="col" className={th}>Account</th>
                   <th scope="col" className={th}>Subscription</th>
-                  <th scope="col" className={th}>Health</th>
                   <th scope="col" className={th}>Players</th>
                   <th scope="col" className={th}>Books</th>
-                  <th scope="col" className={th}>Source</th>
                   <th scope="col" className={th}>Joined</th>
                   <th scope="col" className={`${th} ${pinned} text-right`}>Actions</th>
                 </tr>
@@ -354,17 +341,11 @@ function UsersList() {
                         <td className="px-4 py-3">
                           <SubscriptionCell user={user} />
                         </td>
-                        <td className="px-4 py-3">
-                          <HealthCell user={user} />
-                        </td>
                         <td className="px-4 py-3 text-gray-700 tabular-nums dark:text-gray-300">
                           {user.playersCount}
                         </td>
                         <td className="px-4 py-3 text-gray-700 tabular-nums dark:text-gray-300">
                           {user.booksCount}
-                        </td>
-                        <td className="px-4 py-3">
-                          <SourceCell user={user} />
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-gray-500 dark:text-gray-400">
                           {formatDate(user.dateJoined)}
@@ -410,7 +391,7 @@ function UsersList() {
                       </tr>
                       {open && (
                         <tr id={detailsId} className="bg-gray-50 dark:bg-dark-elevated/50">
-                          <td colSpan={10} className="px-4 py-3">
+                          <td colSpan={8} className="px-4 py-3">
                             {/* Sticky and capped on a phone, where the row is wider
                                 than the card: the details stay in view, not out past
                                 the scroll. */}
@@ -423,6 +404,9 @@ function UsersList() {
                               <Detail label="Email">{user.email}</Detail>
                               <Detail label="Last login">{formatDate(user.lastLogin)}</Detail>
                               <Detail label="Funnel">{FUNNEL[user.subscription.funnelStage]}</Detail>
+                              <Detail label="Health">
+                                <HealthCell user={user} />
+                              </Detail>
                               <Detail label="Came from">
                                 {channel(user.signupSource)}
                                 {user.signupSource && !user.signupSource.fromLink && user.signupSource.utmSource && (
@@ -445,7 +429,7 @@ function UsersList() {
                 })}
                 {users.length === 0 && (
                   <tr>
-                    <td colSpan={10} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">
+                    <td colSpan={8} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">
                       {filtered ? "No one matches." : "No users yet."}
                     </td>
                   </tr>
