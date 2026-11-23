@@ -9,6 +9,7 @@ import { GrantDialog } from "@/components/GrantDialog";
 import { TermsDialog } from "@/components/TermsDialog";
 import { VoidGrantDialog } from "@/components/VoidGrantDialog";
 import { SpinnerIcon } from "@/components/icons";
+import { useUsersListHref } from "@/lib/usersList";
 import {
   ACTIONS, daysUntil, errorMessage, formatAmount, formatDate, formatMoney, FUNNEL, HEALTH, PRICE_GROUPS, STATUS,
 } from "@/lib/format";
@@ -116,10 +117,12 @@ export default function UserPage() {
   const { data: trail = [] } = useGetAuditTrailQuery({ userId: id });
   const [dialog, setDialog] = useState<"payment" | "free" | "terms" | null>(null);
   const [voiding, setVoiding] = useState<Grant | null>(null);
+  // Back to the page of the list this account was opened from.
+  const usersHref = useUsersListHref();
 
   if (isLoading) return <div className="card p-6 text-sm text-gray-500 dark:text-gray-400">Loading…</div>;
   if (isError) return <div className="banner-danger">Couldn&apos;t load this user.</div>;
-  if (!user) return <div className="card p-6 text-sm">No such user. <Link href="/" className="text-brand-600 underline">Back to users</Link></div>;
+  if (!user) return <div className="card p-6 text-sm">No such user. <Link href={usersHref} className="text-brand-600 underline">Back to users</Link></div>;
 
   const sub = user.subscription;
   const status = STATUS[sub.status];
@@ -129,7 +132,7 @@ export default function UserPage() {
   return (
     <div className="space-y-8">
       <div>
-        <Link href="/" className="text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100">← Users</Link>
+        <Link href={usersHref} className="text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100">← Users</Link>
         <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">{user.username}</h1>

@@ -115,14 +115,6 @@ export function CloseIcon({ className = "h-5 w-5" }: IconProps) {
   );
 }
 
-export function ChevronLeftIcon({ className = "h-4 w-4" }: IconProps) {
-  return (
-    <svg {...base} className={className}>
-      <path d="m15 18-6-6 6-6" />
-    </svg>
-  );
-}
-
 export function OverviewIcon({ className = "h-4 w-4" }: IconProps) {
   return (
     <svg {...base} className={className}>

@@ -9,6 +9,7 @@ import { forgetGoogleChoice } from "@/components/GoogleSignIn";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { CloseIcon, InboxIcon, ListIcon, MenuIcon, OverviewIcon, TagIcon, UsersIcon } from "@/components/icons";
 import { clearSession, useSession, type PanelSession } from "@/lib/session";
+import { useUsersListHref } from "@/lib/usersList";
 import { adminApi } from "@/redux/api/adminApi";
 import { useAppDispatch } from "@/redux/hooks";
 
@@ -39,6 +40,8 @@ function Brand() {
 function SidebarContent({ session, onNavigate }: { session: PanelSession; onNavigate?: () => void }) {
   const pathname = usePathname();
   const dispatch = useAppDispatch();
+  // Users goes back to the page of the list last left, not to its top.
+  const usersHref = useUsersListHref();
 
   function signOut() {
     forgetGoogleChoice();
@@ -57,7 +60,7 @@ function SidebarContent({ session, onNavigate }: { session: PanelSession; onNavi
           return (
             <Link
               key={href}
-              href={href}
+              href={href === "/" ? usersHref : href}
               onClick={onNavigate}
               aria-current={current ? "page" : undefined}
               className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium ${
