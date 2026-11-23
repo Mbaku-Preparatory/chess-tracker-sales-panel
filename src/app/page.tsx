@@ -2,14 +2,13 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Fragment, Suspense, useEffect, useState } from "react";
+import { Fragment, Suspense, useCallback, useEffect, useRef, useState } from "react";
 
 import { Badge } from "@/components/Badge";
 import { DeleteUserDialog } from "@/components/DeleteUserDialog";
 import { EditUserDialog } from "@/components/EditUserDialog";
 import {
   BanIcon,
-  ChevronLeftIcon,
   ChevronRightIcon,
   PencilIcon,
   RefreshIcon,
@@ -17,6 +16,7 @@ import {
   UndoIcon,
 } from "@/components/icons";
 import { daysUntil, formatDate, FUNNEL, HEALTH, STATUS } from "@/lib/format";
+import { rememberUsersList } from "@/lib/usersList";
 import {
   NO_SOURCE,
   useGetSignupSourcesQuery,
@@ -110,40 +110,57 @@ const PAGE_SIZE = 10;
 /** Rows fetched per request: five pages, so most paging needs no request. */
 const CHUNK = 50;
 
-/** `value`, once it has stopped changing for `ms`: search waits for a pause in typing. */
-function useDebounced<T>(value: T, ms: number): T {
-  const [settled, setSettled] = useState(value);
-  useEffect(() => {
-    const timer = window.setTimeout(() => setSettled(value), ms);
-    return () => window.clearTimeout(timer);
-  }, [value, ms]);
-  return settled;
-}
+/** How long search waits for a pause in typing before it asks the server. */
+const SEARCH_DELAY_MS = 300;
 
+/** Page numbers shown at once, in blocks: 1–5, then 6–10 (Bomahut's pager, in fives). */
+const PAGE_BLOCK = 5;
+
+const pageButton =
+  "inline-flex h-8 min-w-8 items-center justify-center rounded-lg border px-2 text-sm font-medium tabular-nums transition-colors focus:ring-2 focus:ring-brand-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50";
+const pageIdle =
+  "border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-dark-border dark:bg-dark-elevated dark:text-gray-200 dark:hover:bg-dark-muted";
+const pageCurrent = "border-brand-600 bg-brand-600 text-white";
+
+/** « ‹ 1 2 3 4 5 › »: first, previous, the block of five the page is in, next, last. */
 function Pagination({
   page, pages, first, last, count, busy, onPage,
 }: {
   page: number; pages: number; first: number; last: number; count: number; busy: boolean;
   onPage: (page: number) => void;
 }) {
+  const blockStart = Math.floor(page / PAGE_BLOCK) * PAGE_BLOCK;
+  const numbers = Array.from({ length: Math.min(PAGE_BLOCK, pages - blockStart) }, (_, i) => blockStart + i);
+  const step = (to: number, label: string, symbol: string, disabled: boolean) => (
+    <button type="button" className={`${pageButton} ${pageIdle}`} disabled={disabled || busy} onClick={() => onPage(to)} aria-label={label} title={label}>
+      {symbol}
+    </button>
+  );
+
   return (
     <div className="flex flex-col items-center justify-between gap-3 border-t border-gray-200 px-4 py-3 text-sm sm:flex-row dark:border-dark-border">
       <p className="text-gray-500 dark:text-gray-400">
         {count === 0 ? "No accounts" : <>Showing <span className="font-medium text-gray-900 tabular-nums dark:text-gray-100">{first}–{last}</span> of <span className="font-medium text-gray-900 tabular-nums dark:text-gray-100">{count}</span></>}
       </p>
-      <div className="flex items-center gap-2">
-        <button type="button" className="btn-secondary px-3 py-1.5" disabled={page === 0 || busy} onClick={() => onPage(page - 1)}>
-          <ChevronLeftIcon />
-          Previous
-        </button>
-        <span className="px-1 text-gray-500 tabular-nums dark:text-gray-400">
-          {page + 1} / {pages}
-        </span>
-        <button type="button" className="btn-secondary px-3 py-1.5" disabled={page >= pages - 1 || busy} onClick={() => onPage(page + 1)}>
-          Next
-          <ChevronRightIcon />
-        </button>
-      </div>
+      <nav aria-label="Pages" className="flex items-center gap-1">
+        {step(0, "First page", "«", page === 0)}
+        {step(page - 1, "Previous page", "‹", page === 0)}
+        {numbers.map((n) => (
+          <button
+            key={n}
+            type="button"
+            className={`${pageButton} ${n === page ? pageCurrent : pageIdle}`}
+            disabled={busy && n !== page}
+            onClick={() => onPage(n)}
+            aria-current={n === page ? "page" : undefined}
+            aria-label={`Page ${n + 1}`}
+          >
+            {n + 1}
+          </button>
+        ))}
+        {step(page + 1, "Next page", "›", page >= pages - 1)}
+        {step(pages - 1, `Last page (${pages})`, "»", page >= pages - 1)}
+      </nav>
     </div>
   );
 }
@@ -161,22 +178,51 @@ function UsersList() {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
+  // The search, both filters and the page all live in the URL. Opening an
+  // account and coming back (browser Back, "← Users", or the sidebar) lands on
+  // the same page of the same list, and the overview can link to a filter.
   const statusFilter = params.get("status") ?? "";
   const sourceFilter = params.get("source") ?? "";
+  const search = params.get("q") ?? "";
+  // 1-based in the URL, as it reads; 0-based here.
+  const page = Math.max(0, (Number(params.get("page")) || 1) - 1);
   const { data: sources } = useGetSignupSourcesQuery();
-  const [searchInput, setSearchInput] = useState("");
-  const search = useDebounced(searchInput.trim(), 300);
 
-  // A new search or filter starts again at page one. Reset while rendering
-  // (React's pattern for state that follows a prop), not in an effect, so the
-  // first render after the change already asks for page one. Storing the reset
-  // matters: deriving page one without storing it brought the old page back
-  // when the search was cleared again.
-  const filterKey = `${search}\u0000${statusFilter}\u0000${sourceFilter}`;
-  const [paging, setPaging] = useState({ key: filterKey, page: 0 });
-  if (paging.key !== filterKey) setPaging({ key: filterKey, page: 0 });
-  const page = paging.key === filterKey ? paging.page : 0;
-  const setPage = (next: number) => setPaging({ key: filterKey, page: next });
+  /** Change part of the URL; "" or null removes that part. */
+  const setParams = useCallback(
+    (changes: Record<string, string | null>) => {
+      // The live URL, not `params` from the last render: the search writes from
+      // a timer, and a filter may have changed since it started.
+      const next = new URLSearchParams(window.location.search);
+      for (const [name, value] of Object.entries(changes)) {
+        if (value) next.set(name, value);
+        else next.delete(name);
+      }
+      const query = next.toString();
+      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    },
+    [router, pathname],
+  );
+  // A new search or filter starts again at page one.
+  const setFilter = (name: "status" | "source", value: string) => setParams({ [name]: value, page: null });
+  const setPage = (next: number) => setParams({ page: next > 0 ? String(next + 1) : null });
+
+  // The box shows each keystroke; the URL (and the request) waits for a pause.
+  const [searchInput, setSearchInput] = useState(search);
+  const searchTimer = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(searchTimer.current), []);
+  const onSearchInput = (value: string) => {
+    setSearchInput(value);
+    window.clearTimeout(searchTimer.current);
+    searchTimer.current = window.setTimeout(() => {
+      const q = value.trim();
+      // A trailing space isn't a new search: stay on this page.
+      if (q !== (new URLSearchParams(window.location.search).get("q") ?? "")) setParams({ q, page: null });
+    }, SEARCH_DELAY_MS);
+  };
+
+  const query = params.toString();
+  useEffect(() => rememberUsersList(query ? `${pathname}?${query}` : pathname), [pathname, query]);
 
   // The 50-row slice this page falls in. Pages inside it are already here;
   // crossing into the next or previous slice, or changing the search or the
@@ -192,14 +238,13 @@ function UsersList() {
   const users = currentData?.results.slice(start, start + PAGE_SIZE);
   const filtered = Boolean(search || statusFilter || sourceFilter);
 
-  // Both filters live in the URL, so the overview can link straight to one.
-  const setFilter = (name: "status" | "source", value: string) => {
-    const next = new URLSearchParams(params.toString());
-    if (value) next.set(name, value);
-    else next.delete(name);
-    const query = next.toString();
-    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
-  };
+  // Past the end, e.g. the last account on the last page was just deleted, or
+  // a remembered page of a list that has since shrunk: go to the last page.
+  const pastEnd = currentData !== undefined && page > pages - 1;
+  useEffect(() => {
+    if (pastEnd) setParams({ page: pages > 1 ? String(pages) : null });
+  }, [pastEnd, pages, setParams]);
+
   const [setUserDisabled, { isLoading: isToggling }] = useSetUserDisabledMutation();
 
   const [editing, setEditing] = useState<AdminUser | null>(null);
@@ -243,7 +288,7 @@ function UsersList() {
           className="field sm:max-w-xs"
           placeholder="Search name, username or email"
           value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
+          onChange={(e) => onSearchInput(e.target.value)}
           aria-label="Search users"
         />
         <select className="field sm:w-auto" value={statusFilter} onChange={(e) => setFilter("status", e.target.value)} aria-label="Filter by subscription">
